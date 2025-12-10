@@ -119,7 +119,7 @@ filesystem/%.t3dm: $(gltf_paths)
 	$(eval SRC := $(filter %/$(basename $(notdir $@)).glb,$(gltf_paths)))
 	@mkdir -p $(dir $@)
 	@echo "    [T3D-MODEL] $@"
-	$(T3D_GLTF_TO_3D) "$(SRC)" $@ --ignore-materials --base-scale=$(BASE_SCALE)
+	$(T3D_GLTF_TO_3D) "$(SRC)" $@ --base-scale=$(BASE_SCALE)
 
 filesystem/%.xm64: $(xm_paths)
 	$(eval SRC := $(filter %/$(basename $(notdir $@)).xm,$(xm_paths)))
