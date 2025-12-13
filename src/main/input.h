@@ -73,3 +73,4 @@ int input_type(int padID);
 void input_rumble(int padID, int timer);
 void input_clear(int padID, int input);
 int thread_input(void *param);
+void input_init(void);

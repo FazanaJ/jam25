@@ -7,6 +7,9 @@
 #include <t3d/t3danim.h>
 
 #include "input.h"
+#include "main.h"
+
+#define TROOP_COUNT 100
 
 char *gMemSizeTags[] = {
 	"B", "KB", "MB"
@@ -45,7 +48,7 @@ typedef struct TroopObj {
 
 ArrowData gMapArrows[13 * 10];
 T3DMat4FP gArrowMtx[12 * 10];
-T3DMat4FP gTroopsMtx[300][2];
+T3DMat4FP gTroopsMtx[TROOP_COUNT][2];
 T3DMat4FP gBaseMtx[4];
 T3DMat4FP gSpawnermtx[8];
 T3DVec3 gBasePos[4];
@@ -53,8 +56,13 @@ T3DVec3 gSpawnerPos[8];
 int gSpawnerCD[8];
 int gPoints[4];
 int gSpawnerGlobalTime;
+int gSpawnerRuinTime;
+int gSpawnerRuinID;
+int gPointerCD[4];
+int gPointerGlobalTime;
+int gGameTimer;
 
-TroopObj gTroops[300];
+TroopObj gTroops[TROOP_COUNT];
 
 int mapHeights[] = {
 	0,
@@ -74,16 +82,18 @@ color_t gPlayerColours[] = {
 	RGBA32(255, 255, 0, 255),
 };
 
-float gPlayerCursors[4][2];
-float gPlayerCursorsTarget[4][2];
+float gPlayerCursors[4][3];
+float gPlayerPointers[4][2];
 int gPlayerCount;
 int gCursorCount;
 T3DMat4FP gCursorMtx[4][2];
+T3DMat4FP gPointerMtx[4][2];
 
 
 
 sprite_t *gCursorSprite;
 sprite_t *gArrowSprite;
+sprite_t *gPointerSprite;
 
 float memsize_float(int size, int *tag) {
     if (size < 1024) {
@@ -132,9 +142,6 @@ static int obj_approach(TroopObj *obj) {
 	return false;
 }
 
-#define RATIO_304x224 (304.0f / 224.0f)
-const resolution_t RESOLUTION_304x224 = {.width = 304, .height = 224, .interlaced = INTERLACE_OFF, .overscan_margin = 0.025f, .aspect_ratio = RATIO_304x224};
-const resolution_t RESOLUTION_304x2242 = {.width = 640, .height = 480, .interlaced = INTERLACE_HALF};
 int main(void) {
     __boot_tvtype = TV_NTSC;
     debug_init_isviewer();
@@ -145,26 +152,36 @@ int main(void) {
 
     dfs_init(DFS_DEFAULT_LOCATION);
 
-    display_init(RESOLUTION_304x2242, DEPTH_16_BPP, 3, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
+    display_init(RESOLUTION_320x240, DEPTH_16_BPP, 3, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
 
     rdpq_init();
-    joypad_init();
+    input_init();
 	display_set_fps_limit(30.0f);
 
 	gCursorSprite = sprite_load("rom://cursor.i4.sprite");
 	gArrowSprite = sprite_load("rom://arrow.i4.sprite");
+	gPointerSprite = sprite_load("rom://pointer.ia4.sprite");
 
-	gPlayerCursorsTarget[0][0] = 2; gPlayerCursorsTarget[0][1] = 2;
-	gPlayerCursors[0][0] = 2; gPlayerCursors[0][1] = 2;
+	gPlayerCursors[0][0] = 2; 
+	gPlayerCursors[0][2] = 2;
+	gPlayerCursors[1][0] = 9; 
+	gPlayerCursors[1][2] = 2;
+	gPlayerCursors[2][0] = 2; 
+	gPlayerCursors[2][2] = 7;
+	gPlayerCursors[3][0] = 9; 
+	gPlayerCursors[3][2] = 7;
 
-	gPlayerCursorsTarget[1][0] = 9; gPlayerCursorsTarget[1][1] = 2;
-	gPlayerCursors[1][0] = 9; gPlayerCursors[1][1] = 2;
+	
+	gPlayerPointers[0][0] = 2.75f; 
+	gPlayerPointers[0][1] = 2.75f;
+	gPlayerPointers[1][0] = 9.75f; 
+	gPlayerPointers[1][1] = 2.75f;
+	gPlayerPointers[2][0] = 2.75f; 
+	gPlayerPointers[2][1] = 7.75f;
+	gPlayerPointers[3][0] = 9.75f; 
+	gPlayerPointers[3][1] = 7.75f;
 
-	gPlayerCursorsTarget[2][0] = 2; gPlayerCursorsTarget[2][1] = 7;
-	gPlayerCursors[2][0] = 2; gPlayerCursors[2][1] = 7;
-
-	gPlayerCursorsTarget[3][0] = 9; gPlayerCursorsTarget[3][1] = 7;
-	gPlayerCursors[3][0] = 9; gPlayerCursors[3][1] = 7;
+	gSpawnerRuinTime = 100;
 
 	gTroops[0].active = true;
 	gTroops[0].posTarget.x = ((int) 512 / (int) 12) * 3;
@@ -191,6 +208,10 @@ int main(void) {
 	gBasePos[2].x = -1;
 	gBasePos[3].x = -1;
 	gBasePos[0].x = -1;
+
+	gPointerGlobalTime = 15;
+
+	gGameTimer = 30 * 60 * 3;
 
 	gSpawnerGlobalTime = 25;
 	for (int i = 0; i < 8; i++) {
@@ -492,10 +513,69 @@ int main(void) {
 		camPos.v[1] = 250;
 		camPos.v[2] = 70;
 
+		input_update();
 		for (int i = 0; i < 4; i++) {
-			
+			gPlayerPointers[i][0] += (float) input_stick_x(i, STICK_LEFT) / 250.0f;
+			if (gPlayerPointers[i][0] < 0.0f) {
+
+				gPlayerPointers[i][0] = 0.0f;
+			}
+			if (gPlayerPointers[i][0] >= 12.0f) {
+				gPlayerPointers[i][0] = 11.999f;
+			}
+			gPlayerPointers[i][1] += (float) input_stick_y(i, STICK_LEFT) / 250.0f;
+			if (gPlayerPointers[i][1] < 0.0f) {
+				gPlayerPointers[i][1] = 0.0f;
+			}
+			if (gPlayerPointers[i][1] >= 10.0f) {
+				gPlayerPointers[i][1] = 9.999f;
+			}
+			gPlayerCursors[i][0] = fm_floorf(gPlayerPointers[i][0]);
+			gPlayerCursors[i][2] = fm_floorf(gPlayerPointers[i][1]);
+
+			if (gPointerCD[i] == 0) {
+				int dir = 0;
+				if (input_pressed(i, INPUT_CLEFT, 2)) {
+					input_clear(i, INPUT_CLEFT);
+					dir = 2;
+				} else 
+				if (input_pressed(i, INPUT_CRIGHT, 2)) {
+					input_clear(i, INPUT_CRIGHT);
+					dir = 4;
+				} else 
+				if (input_pressed(i, INPUT_CUP, 2)) {
+					input_clear(i, INPUT_CUP);
+					dir = 3;
+				} else 
+				if (input_pressed(i, INPUT_CDOWN, 2)) {
+					input_clear(i, INPUT_CDOWN);
+					dir = 1;
+				}
+
+				if (dir) {
+					int mapObj = map[(int)((gPlayerCursors[i][2] * 13) + gPlayerCursors[i][0])];
+					debugf("%d %d\n", dir, mapObj);
+					if (mapObj < 16 && (mapObj % 8) != 7) {
+						gMapArrows[(int)((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0])].dir = dir;
+						gMapArrows[(int)((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0])].playerID = i + 1;
+						gPointerCD[i] = gPointerGlobalTime;
+					}
+				}
+
+			} else {
+				gPointerCD[i]--;
+				if (gPointerCD[i] < 0) {
+					gPointerCD[i] = 0;
+				}
+			}
 		}
 
+		if (gSpawnerRuinTime > 0) {
+			gSpawnerRuinTime--;
+		}
+		if (gSpawnerRuinTime <= 0) {
+			gSpawnerRuinID = rand() % 8;
+		}
 		for (int i = 0; i < 8; i++) {
 			if (gSpawnerPos[i].x == -1) {
 				continue;
@@ -505,7 +585,7 @@ int main(void) {
 			if (gSpawnerCD[i] <= 0) {
 				gSpawnerCD[i] = gSpawnerGlobalTime;
 
-				for (int j = 0; j < 300; j++) {
+				for (int j = 0; j < TROOP_COUNT; j++) {
 					if (gTroops[j].active) {
 						continue;
 					}
@@ -516,14 +596,20 @@ int main(void) {
 					gTroops[j].pos.z = gSpawnerPos[i].z;
 
 					gTroops[j].active = true;
-					gTroops[j].type = 0;
+					if (gSpawnerRuinID == i && gSpawnerRuinTime == 0) {
+						gSpawnerRuinTime = 250;
+						gTroops[j].type = (rand() % 4) + 1;
+					} else {
+						
+						gTroops[j].type = TROOP_NORMAL;
+					}
 					gTroops[j].dir = (rand() % 4) + 1;
 					break;
 				}
 			}
 		}
 
-		for (int i = 0; i < 300; i++) {
+		for (int i = 0; i < TROOP_COUNT; i++) {
 			if (gTroops[i].active == false) {
 				continue;
 			}
@@ -564,7 +650,24 @@ int main(void) {
 					} else {
 						for (int j = 0; j < 4; j++) {
 							if ((int) gTroops[i].pos.x == (int) gBasePos[j].x && (int) gTroops[i].pos.z == (int) gBasePos[j].z) {
-								gPoints[j] += 1;
+								
+								switch (gTroops[i].type) {
+									case TROOP_NORMAL:
+										gPoints[j] += 1;
+										break;
+									case TROOP_HOOLIGAN:
+										gPoints[j] /= 2;
+										break;
+									case TROOP_25:
+										gPoints[j] += 25;
+										break;
+									case TROOP_50:
+										gPoints[j] += 50;
+										break;
+									case TROOP_ROULETTE:
+										gPoints[j] += 1;
+										break;
+								}
 								gTroops[i].active = false;
 							}
 						}
@@ -699,8 +802,7 @@ int main(void) {
 		}
 		
 		rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
-		rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
-		for (int i = 0; i < 300; i++) {
+		for (int i = 0; i < TROOP_COUNT; i++) {
 			if (gTroops[i].active == false) {
 				continue;
 			}
@@ -719,6 +821,23 @@ int main(void) {
 			t3d_mat4_to_fixed(&gTroopsMtx[i][gfxFlip], &mtx);
 			data_cache_hit_writeback(&gTroopsMtx[i][gfxFlip], sizeof(T3DMat4FP));
 			t3d_matrix_push(&gTroopsMtx[i][gfxFlip]);
+			switch (gTroops[i].type) {
+				case TROOP_NORMAL:
+					rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
+					break;
+				case TROOP_HOOLIGAN:
+					rdpq_set_prim_color(RGBA32(255, 127, 0, 255));
+					break;
+				case TROOP_25:
+					rdpq_set_prim_color(RGBA32(127, 127, 255, 255));
+					break;
+				case TROOP_50:
+					rdpq_set_prim_color(RGBA32(127, 255, 127, 255));
+					break;
+				case TROOP_ROULETTE:
+					rdpq_set_prim_color(RGBA32(255, 0, 255, 255));
+					break;
+			}
 			rspq_block_run(gArrowBlock);
 			t3d_matrix_pop(1);
 		}
@@ -730,7 +849,7 @@ int main(void) {
 			float scale = fm_sinf((float) ticks / 2.5f) * 0.1f;
 			float x = ((int) 512 / (int) 12) * gPlayerCursors[i][0];
 			float y = 0.0f;
-			float z = ((int) 512 / (int) 12) * gPlayerCursors[i][1];
+			float z = ((int) 512 / (int) 12) * gPlayerCursors[i][2];
 			t3d_mat4_identity(&mtx);
 			t3d_mat4_translate(&mtx, x - 258.0f + 22.0f, y, z - 258.0f + 22.0f);
 			t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
@@ -740,13 +859,32 @@ int main(void) {
 			rspq_block_run(cursor);
 			t3d_matrix_pop(1);
 		}
+		rdpq_sprite_upload(TILE0, gPointerSprite, &parms);
+		for (int i = 0; i < gCursorCount; i++) {
+			rdpq_set_prim_color(gPlayerColours[i]);
+			T3DMat4 mtx;
+			float x = ((int) 512 / (int) 12) * gPlayerPointers[i][0];
+			float z = ((int) 512 / (int) 12) * gPlayerPointers[i][1];
+			t3d_mat4_identity(&mtx);
+			T3DVec3 angle = {{1, 0, 0}};
+			t3d_mat4_rotate(&mtx, &angle, 0);
+			t3d_mat4_translate(&mtx, x - 258.0f + 16.0f, 0.0f, z - 258.0f + 16.0f);
+			t3d_mat4_scale(&mtx, 0.75f, 1.0f, 0.75f);
+			t3d_mat4_to_fixed(&gPointerMtx[i][gfxFlip], &mtx);
+			data_cache_hit_writeback(&gPointerMtx[i][gfxFlip], sizeof(T3DMat4FP));
+			t3d_matrix_push(&gPointerMtx[i][gfxFlip]);
+			rspq_block_run(cursor);
+			t3d_matrix_pop(1);
+		}
 
     	rdpq_text_printf(NULL, 1, 16, 24, "FPS: %d (%2.1fms)", (int) ceilf(display_get_fps()), (double) (1000.0f / display_get_fps()));
     	rdpq_text_printf(NULL, 1, 16, 34, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
-    	rdpq_text_printf(NULL, 1, 16, 44, "POINTS:\n1: %d\n2: %d\n3: %d\n4: %d\n", gPoints[0], gPoints[1], gPoints[2], gPoints[3]);
+    	rdpq_text_printf(NULL, 1, 16, 44, "Time: %02d:%02d", gGameTimer / (60 * 30), (gGameTimer / 30) % 60);
+    	rdpq_text_printf(NULL, 1, 16, 54, "POINTS:\n1: %d\n2: %d\n3: %d\n4: %d\n", gPoints[0], gPoints[1], gPoints[2], gPoints[3]);
 
 		rdpq_detach_show();
 		ticks++;
+		gGameTimer--;
 
 		gfxFlip ^= 1;
     }

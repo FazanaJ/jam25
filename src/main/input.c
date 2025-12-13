@@ -17,6 +17,17 @@ uint8_t gRawInputIter;
 uint8_t gStickRange;
 int8_t sPakDetectionTimer;
 
+void input_init(void) {
+    joypad_init();
+    bzero(&gInputData, sizeof(Input));
+    for (int i = 0; i < 4; i++) {
+        gCurrentController[i] = CONTROLLER_OFF;
+        gInputData[i].pak = 0;
+    }
+    gDeadzone = 10;
+    gStickRange = 64;
+}
+
 /**
  * Activates a controller and assigns the inputs to that ID.
  */
