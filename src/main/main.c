@@ -190,25 +190,25 @@ int main(void) {
 			gPlayerCursors[i][2] = fm_floorf(gPlayerPointers[i][1]);
 
 			if (gPointerCD[i] == 0) {
-				int dir = 0;
+				int dir = DIR_NONE;
 				if (input_pressed(i, INPUT_CLEFT, 2)) {
 					input_clear(i, INPUT_CLEFT);
-					dir = 2;
+					dir = DIR_LEFT;
 				} else 
 				if (input_pressed(i, INPUT_CRIGHT, 2)) {
 					input_clear(i, INPUT_CRIGHT);
-					dir = 4;
+					dir = DIR_RIGHT;
 				} else 
 				if (input_pressed(i, INPUT_CUP, 2)) {
 					input_clear(i, INPUT_CUP);
-					dir = 3;
+					dir = DIR_UP;
 				} else 
 				if (input_pressed(i, INPUT_CDOWN, 2)) {
 					input_clear(i, INPUT_CDOWN);
-					dir = 1;
+					dir = DIR_DOWN;
 				}
 
-				if (dir) {
+				if (dir != DIR_NONE) {
 					int mapObj = map[(int)((gPlayerCursors[i][2] * 13) + gPlayerCursors[i][0])];
 					if (mapObj < 16 && (mapObj % 8) != 7) {
 						gMapArrows[(int)((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0])].dir = dir;
@@ -276,15 +276,15 @@ int main(void) {
 				}
 				while (true) {
 					switch (gTroops[i].dir) {
-						case 1:
+						case DIR_DOWN:
 							gTroops[i].posTarget.x -= ((int) 512 / (int) 12) * 0;
 							gTroops[i].posTarget.z += ((int) 512 / (int) 12) * 1;
 							break;
-						case 2:
+						case DIR_LEFT:
 							gTroops[i].posTarget.x -= ((int) 512 / (int) 12) * 1;
 							gTroops[i].posTarget.z += ((int) 512 / (int) 12) * 0;
 							break;
-						case 3:
+						case DIR_UP:
 							gTroops[i].posTarget.x -= ((int) 512 / (int) 12) * 0;
 							gTroops[i].posTarget.z -= ((int) 512 / (int) 12) * 1;
 							break;
@@ -297,8 +297,8 @@ int main(void) {
 					int zT = gTroops[i].posTarget.z / ((int) 512 / (int) 12);
 					if (xT < 0 || zT < 0 || xT >= 12 || zT >= 10) {
 						gTroops[i].dir--;
-						if (gTroops[i].dir == 0) {
-							gTroops[i].dir = 4;
+						if (gTroops[i].dir == DIR_NONE) {
+							gTroops[i].dir = DIR_RIGHT;
 						}
 						gTroops[i].posTarget.x = gTroops[i].pos.x;
 						gTroops[i].posTarget.z = gTroops[i].pos.z;

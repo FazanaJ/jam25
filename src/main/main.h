@@ -20,6 +20,14 @@ enum TroopIDs {
     TROOP_ROULETTE
 };
 
+enum Directions {
+    DIR_NONE,
+    DIR_DOWN,
+    DIR_LEFT,
+    DIR_UP,
+    DIR_RIGHT
+};
+
 typedef struct ArrowData {
 	uint8_t playerID;
 	uint8_t dir;
@@ -59,3 +67,5 @@ extern rspq_block_t *cursor;
 extern rspq_block_t *dplMapWalls;
 extern rspq_block_t *dplMapFloor;
 extern rspq_block_t *gBaseBlock;
+
+float approachF(float current, float target, float inc);
