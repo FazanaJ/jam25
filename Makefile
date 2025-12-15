@@ -113,7 +113,7 @@ filesystem/%.sprite: $(sprite_paths)
 	@echo "    [SPRITE] $@"
 	@$(N64_MKSPRITE) $(MKSPRITE_FLAGS) -c $(ASSET_COMPRESS_LEVEL) -o filesystem "$(SRC)"
 
-BASE_SCALE = 32
+BASE_SCALE = 64
 
 filesystem/%.t3dm: $(gltf_paths)
 	$(eval SRC := $(filter %/$(basename $(notdir $@)).glb,$(gltf_paths)))
@@ -170,6 +170,8 @@ $(BUILD_DIR)/$(ROM_NAME).dfs: $(DSO_LIST) $(asset_list) BINARIES_BUILT
 $(BUILD_DIR)/$(ROM_NAME).elf: $(src:%.c=$(BUILD_DIR)/%.o) $(MAIN_ELF_EXTERNS)
 $(MAIN_ELF_EXTERNS): $(DSO_LIST)
 
+test_ares:
+	/Applications/ares.app/Contents/MacOS/ares "$(ROM_NAME).z64"
 
 clean:
 	rm -rf $(BUILD_DIR) *.z64 filesystem bin

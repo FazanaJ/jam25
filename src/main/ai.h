@@ -6,4 +6,6 @@ enum AIDifficulty {
     AIDIFF_HARD
 };
 
-void ai_run(int playerID);
+extern float gAICursorTarget[4][2];
+
+void ai_run(int playerID, int updateRate);

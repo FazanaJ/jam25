@@ -1,0 +1,105 @@
+#pragma once
+
+#include <libdragon.h>
+
+#define MIXER_BUFFER_SIZE 2
+#define AUDIO_FREQUENCY 22050
+#define CHANNEL_MAX_NUM 32
+
+enum SoundIDs {
+    SOUND_MENU_MOVE,
+    SOUND_MENU_ACCEPT,
+    SOUND_MENU_BACK,
+    SOUND_VOICE_COUNTDOWN_3,
+    SOUND_VOICE_COUNTDOWN_2,
+    SOUND_VOICE_COUNTDOWN_1,
+    SOUND_VOICE_COUNTDOWN_GO,
+    SOUND_MENU_PAUSE,
+    SOUND_VOICE_TIMER_60,
+    SOUND_VOICE_TIMER_30,
+    SOUND_VOICE_TIMER_10,
+    SOUND_VOICE_TIMER_5,
+    SOUND_VOICE_TIMER_4,
+    SOUND_VOICE_TIMER_3,
+    SOUND_VOICE_TIMER_2,
+    SOUND_VOICE_TIMER_1,
+    SOUND_VOICE_TIMER_FINISH,
+
+    SOUND_VOICE_WIN_1,
+    SOUND_VOICE_WIN_2,
+    SOUND_VOICE_WIN_3,
+    SOUND_VOICE_WIN_4,
+
+    SOUND_VOICE_TIE,
+    SOUND_VOICE_TIE_AGAIN,
+
+    SOUND_VOICE_EVENT_1,
+    SOUND_VOICE_EVENT_2,
+    SOUND_VOICE_EVENT_3,
+    SOUND_VOICE_EVENT_4,
+    SOUND_VOICE_EVENT_5,
+    SOUND_VOICE_EVENT_6,
+    SOUND_VOICE_EVENT_7,
+
+    SOUND_VOICE_PERFECT_1,
+    SOUND_VOICE_PERFECT_2,
+
+    SOUND_VOICE_LEADER_1,
+    SOUND_VOICE_LEADER_2,
+    SOUND_VOICE_LEADER_3,
+    SOUND_VOICE_LEADER_4,
+
+    SOUND_VOICE_TUTORIAL_1,
+    SOUND_VOICE_TUTORIAL_2,
+    SOUND_VOICE_TUTORIAL_3,
+    SOUND_VOICE_TUTORIAL_4,
+    SOUND_VOICE_TUTORIAL_5,
+    SOUND_VOICE_TUTORIAL_6,
+    SOUND_VOICE_TUTORIAL_7,
+    SOUND_VOICE_TUTORIAL_8,
+    SOUND_VOICE_TUTORIAL_9,
+    SOUND_VOICE_TUTORIAL_10,
+
+    SOUND_ARROW_1,
+    SOUND_ARROW_2,
+    SOUND_ARROW_3,
+    SOUND_ARROW_4,
+
+    SOUND_TROOP_SECURE,
+    SOUND_TROOP_SECURE_HOOLIGAN,
+    SOUND_TROOP_SECURE_SPECIAL,
+    SOUND_TROOP_DIE,
+
+    SOUND_MENU_SWOOSH,
+
+    SOUND_COUNT
+};
+
+enum SoundChannelIDs {
+    CHANNEL_GLOBAL,
+    CHANNEL_MENU,
+    CHANNEL_ENV1,
+    CHANNEL_ENV2,
+    CHANNEL_ENV3,
+    CHANNEL_VOICE,
+    CHANNEL_DYNAMIC
+};
+
+typedef struct SoundData {
+    char *path;
+    unsigned char priority;
+    wav64_t sound;
+} SoundData;
+
+typedef struct SequenceData {
+    char *seqPath;
+    char channelCount;
+    char pad[3];
+} SequenceData;
+
+void sound_play_global(int soundID);
+void music_play(int seqID, int fadeTime);
+void audio_loop(int updateRate, float updateRateF);
+void audio_boot(void);
+void sound_play(int soundID);
+void sound_play_channel(int soundID, int channel);

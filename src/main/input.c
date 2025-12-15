@@ -79,9 +79,13 @@ void input_update(void) {
     for (int k = 0; k < 4; k++) {
         int p = gCurrentController[k];
         if (p == CONTROLLER_OFF) {
-            input_set_id(PLAYER_1);
+            input_set_id(k);
             input_reset(k);
-            continue;
+            if (gCurrentController[k] == CONTROLLER_OFF) {
+                continue;
+            } else {
+                p = gCurrentController[k];
+            }
         }
 
         sPakDetectionTimer--;
@@ -266,10 +270,24 @@ float input_stick_mag(int padID, int type) {
 }
 
 /**
- * Returns whetherthe controller belongs to the N64 or the Gamecube
+ * Returns whether the controller belongs to the N64 or the Gamecube
  */
 int input_type(int padID) {
     return gInputData[padID].type;
+}
+
+/**
+ * Returns which controller port this input is connected to.
+ */
+int input_port(int padID) {
+    return gCurrentController[padID];
+}
+
+/**
+ * Return the accessory ID of the input.
+ */
+int input_accessory(int padID) {
+    return gInputData[padID].pak;
 }
 
 /**

@@ -3,45 +3,32 @@
 #include <t3d/t3d.h>
 #include <t3d/t3dmath.h>
 #include <t3d/t3dmodel.h>
-#include <t3d/t3dskeleton.h>
 #include <t3d/t3danim.h>
+#include <t3d/t3dskeleton.h>
 
 #include "ai.h"
+#include "audio.h"
 #include "boot.h"
 #include "input.h"
+#include "game.h"
 #include "main.h"
+#include "menu.h"
 
 char *gMemSizeTags[] = {
 	"B", "KB", "MB"
 };
 
-// Key:
-
-uint8_t map[13 * 11] = {
-	8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,     7,
-	0, 24, 0, 0, 24, 0, 0, 24, 0, 0, 24, 0,     7,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     7,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     7,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     7,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     7,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     7,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     7,
-	0, 16, 0, 0, 16, 0, 0, 16, 0, 0, 16, 0,     7,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,     7,
-
-
-	7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,     7,
-};
-
-ArrowData gMapArrows[13 * 10];
+ArrowData gMapArrows[12 * 10];
 T3DMat4FP gArrowMtx[12 * 10];
 T3DMat4FP gTroopsMtx[TROOP_COUNT][2];
 T3DMat4FP gBaseMtx[4];
 T3DMat4FP gSpawnermtx[8];
+T3DMat4FP gMapMtx[2];
 T3DVec3 gBasePos[4];
 T3DVec3 gSpawnerPos[8];
 int gSpawnerCD[8];
 int gPoints[4];
+int gPointsVisual[4];
 int gSpawnerGlobalTime;
 int gSpawnerRuinTime;
 int gSpawnerRuinID;
@@ -49,6 +36,14 @@ int gPointerCD[4];
 int gPointerGlobalTime;
 int gGameTimer;
 int gPlayerIDs[4];
+int gPlayerWins[4];
+int gMenuID;
+int gLevelID;
+int gTimerStage;
+int gGamePaused;
+float gMapOffsetX;
+T3DVec3 gCameraPos;
+T3DVec3 gCameraFocus;
 
 TroopObj gTroops[TROOP_COUNT];
 
@@ -64,28 +59,62 @@ int mapHeights[] = {
 };
 
 color_t gPlayerColours[] = {
-	RGBA32(255, 0, 0, 255),
-	RGBA32(0, 0, 255, 255),
-	RGBA32(0, 255, 0, 255),
-	RGBA32(255, 255, 0, 255),
+	RGBA32(255, 64, 64, 255),
+	RGBA32(64, 64, 255, 255),
+	RGBA32(64, 255, 64, 255),
+	RGBA32(255, 255, 64, 255),
+};
+
+T3DVec3 gMainMenuCameraPath[] = {
+	{150, 100, 300},
+};
+
+T3DVec3 gMainMenuCameraPathFocus[] = {
+	{0, 20, 0},
 };
 
 float gPlayerCursors[4][3];
 float gPlayerPointers[4][2];
 int gPlayerCount;
 int gCursorCount;
+int ticks = 0;
 T3DMat4FP gCursorMtx[4][2];
 T3DMat4FP gPointerMtx[4][2];
 
 rspq_block_t *gArrowBlock;
 rspq_block_t *cursor;
-rspq_block_t *dplMapWalls;
-rspq_block_t *dplMapFloor;
+rspq_block_t *dplMapBottom[16];
+rspq_block_t *dplMapWalls[16];
+rspq_block_t *dplMapFloor[16];
 rspq_block_t *gBaseBlock;
 
 sprite_t *gCursorSprite;
 sprite_t *gArrowSprite;
 sprite_t *gPointerSprite;
+sprite_t *gNumberSprites;
+sprite_t *gNumberBGSprite;
+sprite_t *gScoreBoardSprite;
+sprite_t *gScoreLeaderSprite;
+sprite_t *gScoreBorderSprite;
+sprite_t *gScoreUnderlaySprite;
+sprite_t *gPauseOptionSprites[5];
+sprite_t *gScoreBoardPlayerSprites[4];
+sprite_t *gLevelSprites[16];
+
+T3DModel *gArmyGatorModel;
+rspq_block_t *gArmyGatorBlock;
+T3DModel *gMenuLevelModel;
+rspq_block_t *gMenuModelBlock;
+T3DSkeleton gArmyGatorSkel;
+T3DAnim gArmyGatorAnims;
+
+LevelData *gCurrentLevel;
+
+float lerpf(float a, float b, float f) {
+    float diff = b - a;
+    a = a + (diff * f);
+    return a;
+}
 
 float memsize_float(int size, int *tag) {
     if (size < 1024) {
@@ -100,45 +129,96 @@ float memsize_float(int size, int *tag) {
     }
 }
 
+static unsigned int sDeltaTime = 0;
+static unsigned int sPrevTime = 0;
+static unsigned int sCurTime;
+static unsigned int sDeltaTimePrev = 0;
+unsigned char sResetTime = false;
+static unsigned char sPrevDelta;
+static float sPrevDeltaF;
 
-float approachF(float current, float target, float inc) {
-    if (current < target) {
-        current += inc;
-        if (current > target) {
-            current = target;
-        }
-    } else {
-        current -= inc;
-        if (current < target) {
-            current = target;
+/**
+ * Generate the delta time values.
+ * Use a while loop with a frame debt system to generate accurate integer delta, with just a regular comparison for floats.
+ * Multiply the float value by 1.2 for PAL users. For integer, use timer_int(int timer) to set a region corrected timer instead.
+*/
+static inline void update_game_time(int *updateRate, float *updateRateF) {
+    
+    sCurTime = timer_ticks();
+    *updateRateF = ((float) TIMER_MICROS(sCurTime - sPrevTime) / 16666.666f);
+    if (*updateRateF <= 0.0001f) {
+        *updateRateF = 0.0001f;
+    }
+    sDeltaTime += TIMER_MICROS(sCurTime - sPrevTime);
+    sPrevTime = sCurTime;
+    sDeltaTime -= 16666;
+    *updateRate = LOGIC_60FPS;
+    while (sDeltaTime > 16666) {
+        sDeltaTime -= 16666;
+        *updateRate = *updateRate + 1;
+        if (*updateRate == LOGIC_15FPS) {
+            sDeltaTime = 0;
         }
     }
-    return current;
+
+    if (sResetTime) {
+        sResetTime = false;
+        sDeltaTime = sDeltaTimePrev;
+        sPrevTime = sCurTime + sDeltaTimePrev;
+        *updateRateF = sPrevDeltaF;
+        *updateRate = sPrevDelta;
+    }
 }
 
-static int obj_approach(TroopObj *obj) {
-	int oneTrue = false;
-	obj->pos.x = approachF(obj->pos.x, obj->posTarget.x, 8.0f);
-	obj->pos.z = approachF(obj->pos.z, obj->posTarget.z, 8.0f);
+void reset_game_time(void) {
+    sResetTime = true;
+}
 
-	if (fabsf(obj->pos.x - obj->posTarget.x) < 8.0f) {
-		obj->pos.x = obj->posTarget.x;
-		oneTrue = true;
+void deltatime_snapshot(int updateRate, float updateRateF) {
+    sPrevDelta = updateRate;
+    sPrevDeltaF = updateRateF;
+    sDeltaTimePrev = sDeltaTime;
+}
+
+rspq_block_t *gBackgroundBlock;
+
+void bg_render(void) {
+	if (gLevelID == 0 || fabsf(gMapOffsetX) > 2.0f) {
+		t3d_screen_clear_depth();
+		t3d_screen_clear_color(RGBA32(96, 180, 224, 255));
+		return;
 	}
-	if (fabsf(obj->pos.z - obj->posTarget.z) < 8.0f) {
-		obj->pos.z = obj->posTarget.z;
-		if (oneTrue) {
-			return true;
+	if (gBackgroundBlock == NULL) {
+		rspq_block_begin();
+		rdpq_set_mode_fill(RGBA32(96, 180, 225, 255));
+
+		int width = display_get_width();
+		int height = (display_get_height() * 0.8f) / 16;
+		int x = 72 * gScreenMul;
+		int x2 = display_get_width() - (72 * gScreenMul);
+		float step = 4 * gScreenMul;
+		int y = 8 * gScreenMul;
+
+		rdpq_fill_rectangle(0, 0, width, y);
+		rdpq_fill_rectangle(x, y, x2, y + height);
+		for (int i = 0; i < 16; i++) {
+			rdpq_fill_rectangle(0, y, x, y + height);
+			rdpq_fill_rectangle(x2, y, width, y + height);
+			
+			x -= step;
+			x2 += step;
+			y += height;
 		}
+		rdpq_fill_rectangle(x + (step * 2), y - (height * 2), x2 + (step * 2), y - height);
+		rdpq_fill_rectangle(x + step, y - height, x2 + step, y);
+		rdpq_fill_rectangle(0, y, width, display_get_height());
+		gBackgroundBlock = rspq_block_end();
 	}
-	return false;
+	rspq_block_run(gBackgroundBlock);
 }
 
 int main(void) {
 	int gfxFlip = 0;
-	int ticks = 0;
-    T3DVec3 camPos = {{0, 45.0f, 80.0f}};
-    T3DVec3 camTarget = {{0, 0,-10}};
     boot();
 
     T3DVec3 lightDirVec = {{1.0f, 1.0f, 1.0f}};
@@ -148,216 +228,88 @@ int main(void) {
     uint8_t colorDir[4]     = {0xFF, 0xAA, 0xAA, 0xFF};
     T3DViewport viewport = t3d_viewport_create_buffered(2);
 
-	gPlayerIDs[0] = PLAYER_1;
-	gPlayerIDs[1] = -1;
-	gPlayerIDs[2] = -1;
-	gPlayerIDs[3] = -1;
-
     while(true) {
     	struct mallinfo mem_info = mallinfo();
-		int ram =  (mem_info.uordblks + (size_t) (((unsigned int) HEAP_START_ADDR - 0x80000000) + 0x10000));
+		int ram =  (mem_info.uordblks + (size_t) (((unsigned int) HEAP_START_ADDR - 0x80000000) + 0x10000 + (display_get_width() * display_get_height() * 2)));
 		int tag;
+		int updateRate;
+		float updateRateF;
 
-		camTarget.v[0] = -4;
-		camTarget.v[1] = 0;
-		camTarget.v[2] = 0;
-		camPos.v[0] = -4;
-		camPos.v[1] = 250;
-		camPos.v[2] = 70;
+		update_game_time(&updateRate, &updateRateF);
 
-		input_update();
-		for (int i = 0; i < 4; i++) {
-			if (gPlayerIDs[i] == -1) {
-				input_reset(i);
-				ai_run(i);
-			}
-			gPlayerPointers[i][0] += (float) input_stick_x(i, STICK_LEFT) / 250.0f;
-			if (gPlayerPointers[i][0] < 0.0f) {
-
-				gPlayerPointers[i][0] = 0.0f;
-			}
-			if (gPlayerPointers[i][0] >= 12.0f) {
-				gPlayerPointers[i][0] = 11.999f;
-			}
-			gPlayerPointers[i][1] += (float) input_stick_y(i, STICK_LEFT) / 250.0f;
-			if (gPlayerPointers[i][1] < 0.0f) {
-				gPlayerPointers[i][1] = 0.0f;
-			}
-			if (gPlayerPointers[i][1] >= 10.0f) {
-				gPlayerPointers[i][1] = 9.999f;
-			}
-			gPlayerCursors[i][0] = fm_floorf(gPlayerPointers[i][0]);
-			gPlayerCursors[i][2] = fm_floorf(gPlayerPointers[i][1]);
-
-			if (gPointerCD[i] == 0) {
-				int dir = DIR_NONE;
-				if (input_pressed(i, INPUT_CLEFT, 2)) {
-					input_clear(i, INPUT_CLEFT);
-					dir = DIR_LEFT;
-				} else 
-				if (input_pressed(i, INPUT_CRIGHT, 2)) {
-					input_clear(i, INPUT_CRIGHT);
-					dir = DIR_RIGHT;
-				} else 
-				if (input_pressed(i, INPUT_CUP, 2)) {
-					input_clear(i, INPUT_CUP);
-					dir = DIR_UP;
-				} else 
-				if (input_pressed(i, INPUT_CDOWN, 2)) {
-					input_clear(i, INPUT_CDOWN);
-					dir = DIR_DOWN;
-				}
-
-				if (dir != DIR_NONE) {
-					int mapObj = map[(int)((gPlayerCursors[i][2] * 13) + gPlayerCursors[i][0])];
-					if (mapObj < 16 && (mapObj % 8) != 7) {
-						gMapArrows[(int)((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0])].dir = dir;
-						gMapArrows[(int)((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0])].playerID = i + 1;
-						gPointerCD[i] = gPointerGlobalTime;
-					}
-				}
-
-			} else {
-				gPointerCD[i]--;
-				if (gPointerCD[i] < 0) {
-					gPointerCD[i] = 0;
-				}
-			}
-		}
-
-		if (gSpawnerRuinTime > 0) {
-			gSpawnerRuinTime--;
-		}
-		if (gSpawnerRuinTime <= 0) {
-			gSpawnerRuinID = rand() % 8;
-		}
-		for (int i = 0; i < 8; i++) {
-			if (gSpawnerPos[i].x == -1) {
-				continue;
-			}
-
-			gSpawnerCD[i]--;
-			if (gSpawnerCD[i] <= 0) {
-				gSpawnerCD[i] = gSpawnerGlobalTime;
-
-				for (int j = 0; j < TROOP_COUNT; j++) {
-					if (gTroops[j].active) {
-						continue;
-					}
-
-					gTroops[j].posTarget.x = gSpawnerPos[i].x;
-					gTroops[j].posTarget.z = gSpawnerPos[i].z;
-					gTroops[j].pos.x = gSpawnerPos[i].x;
-					gTroops[j].pos.z = gSpawnerPos[i].z;
-
-					gTroops[j].active = true;
-					if (gSpawnerRuinID == i && gSpawnerRuinTime == 0) {
-						gSpawnerRuinTime = 250;
-						gTroops[j].type = (rand() % 4) + 1;
-					} else {
-						
-						gTroops[j].type = TROOP_NORMAL;
-					}
-					gTroops[j].dir = (rand() % 4) + 1;
-					break;
-				}
-			}
-		}
-
-		for (int i = 0; i < TROOP_COUNT; i++) {
-			if (gTroops[i].active == false) {
-				continue;
-			}
-			if (obj_approach(&gTroops[i])) {
-				int x = gTroops[i].pos.x / ((int) 512 / (int) 12);
-				int z = gTroops[i].pos.z / ((int) 512 / (int) 12);
-				if (gMapArrows[(z * 12) + x].playerID) {
-					gTroops[i].dir = gMapArrows[(z * 12) + x].dir;
-				}
-				while (true) {
-					switch (gTroops[i].dir) {
-						case DIR_DOWN:
-							gTroops[i].posTarget.x -= ((int) 512 / (int) 12) * 0;
-							gTroops[i].posTarget.z += ((int) 512 / (int) 12) * 1;
-							break;
-						case DIR_LEFT:
-							gTroops[i].posTarget.x -= ((int) 512 / (int) 12) * 1;
-							gTroops[i].posTarget.z += ((int) 512 / (int) 12) * 0;
-							break;
-						case DIR_UP:
-							gTroops[i].posTarget.x -= ((int) 512 / (int) 12) * 0;
-							gTroops[i].posTarget.z -= ((int) 512 / (int) 12) * 1;
-							break;
-						default:
-							gTroops[i].posTarget.x += ((int) 512 / (int) 12) * 1;
-							gTroops[i].posTarget.z += ((int) 512 / (int) 12) * 0;
-							break;
-					}
-					int xT = gTroops[i].posTarget.x / ((int) 512 / (int) 12);
-					int zT = gTroops[i].posTarget.z / ((int) 512 / (int) 12);
-					if (xT < 0 || zT < 0 || xT >= 12 || zT >= 10) {
-						gTroops[i].dir--;
-						if (gTroops[i].dir == DIR_NONE) {
-							gTroops[i].dir = DIR_RIGHT;
-						}
-						gTroops[i].posTarget.x = gTroops[i].pos.x;
-						gTroops[i].posTarget.z = gTroops[i].pos.z;
-					} else {
-						for (int j = 0; j < 4; j++) {
-							if ((int) gTroops[i].pos.x == (int) gBasePos[j].x && (int) gTroops[i].pos.z == (int) gBasePos[j].z) {
-								
-								switch (gTroops[i].type) {
-									case TROOP_NORMAL:
-										gPoints[j] += 1;
-										break;
-									case TROOP_HOOLIGAN:
-										gPoints[j] /= 2;
-										break;
-									case TROOP_25:
-										gPoints[j] += 25;
-										break;
-									case TROOP_50:
-										gPoints[j] += 50;
-										break;
-									case TROOP_ROULETTE:
-										gPoints[j] += 1;
-										break;
-								}
-								gTroops[i].active = false;
-							}
-						}
-						break;
-					}
-				}
-			}
-			
-			int x = gTroops[i].pos.x / ((int) 512 / (int) 12);
-			int z = gTroops[i].pos.z / ((int) 512 / (int) 12);
-			if (x < 0 || z < 0 || x >= 12 || z >= 10) {
-				gTroops[i].pos.y -= 4.0f;
-				if (gTroops[i].pos.y < -20.0f) {
-					gTroops[i].active = false;
-				}
-			}
-		}
+		input_update(updateRate);
+		game_run(updateRate, updateRateF);
+		audio_loop(updateRate, updateRateF);
 
 		t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(85.0f), 25.0f, 300.0f);
-		t3d_viewport_look_at(&viewport, &camPos, &camTarget, &(T3DVec3){{0,1,0}});
+		t3d_viewport_look_at(&viewport, &gCameraPos, &gCameraFocus, &(T3DVec3){{0,1,0}});
 
 		// ======== Draw (3D) ======== //
 		rdpq_attach(display_get(), display_get_zbuf());
 		t3d_frame_start();
 		t3d_viewport_attach(&viewport);
 
-		t3d_screen_clear_color(RGBA32(224, 180, 96, 0xFF));
-		t3d_screen_clear_depth();
+		bg_render();
 
 		t3d_light_set_ambient(colorAmbient);
 		t3d_light_set_directional(0, colorDir, &lightDirVec);
 		t3d_light_set_count(1);
 
-		rspq_block_run(dplMapFloor);
-		//rspq_block_run(dplMapWalls);
+		if (fabsf(gMapOffsetX) > 192.0f) {
+			goto skipDraw;
+		}
+		T3DMat4 mtx;
+		t3d_mat4_identity(&mtx);
+		t3d_mat4_translate(&mtx, gMapOffsetX, 0.0f, 0.0f);
+		t3d_mat4_to_fixed(&gMapMtx[gfxFlip], &mtx);
+		data_cache_hit_writeback(&gMapMtx[gfxFlip], sizeof(T3DMat4FP));
+		t3d_matrix_push(&gMapMtx[gfxFlip]);
+		rdpq_set_mode_standard();
+		rdpq_mode_antialias(AA_STANDARD);
+		rdpq_mode_filter(FILTER_BILINEAR);
+		rdpq_mode_persp(true);
+		for (int i = 0; i < 16; i++) {
+			if (dplMapBottom[i]) {
+				rspq_block_run(dplMapBottom[i]);
+			}
+		}
+		for (int i = 0; i < 16; i++) {
+			if (dplMapFloor[i]) {
+				rspq_block_run(dplMapFloor[i]);
+			}
+		}
+		for (int i = 0; i < 16; i++) {
+			if (dplMapWalls[i]) {
+				rspq_block_run(dplMapWalls[i]);
+			}
+		}
+
+		if (gLevelID == 0 && gArmyGatorBlock) {
+			T3DMat4 mtx;
+			gCameraPos.x = 150;
+			gCameraPos.y = 100;
+			gCameraPos.z = 300;
+			gCameraFocus.x = 0;
+			gCameraFocus.y = 20;
+			gCameraFocus.z = 0;
+			rdpq_mode_zbuf(true, true);
+			t3d_anim_update(&gArmyGatorAnims, updateRateF * 0.02f);
+			t3d_skeleton_update(&gArmyGatorSkel);
+			t3d_mat4_identity(&mtx);
+			t3d_mat4_translate(&mtx, 0, 0.0f, 0.0f);
+			t3d_mat4_scale(&mtx, 0.5f, 0.5f, 0.5f);
+			t3d_mat4_to_fixed(&gBaseMtx[gfxFlip], &mtx);
+			data_cache_hit_writeback(&gBaseMtx[gfxFlip], sizeof(T3DMat4FP));
+    		t3d_skeleton_use(&gArmyGatorSkel);
+			t3d_matrix_push(&gBaseMtx[gfxFlip]);
+				rspq_block_run(gArmyGatorBlock);
+			t3d_matrix_pop(1);
+			rdpq_sync_pipe();
+			rspq_block_run(gMenuModelBlock);
+			rdpq_sync_pipe();
+			rdpq_mode_zbuf(false, false);
+		}
+
 		rdpq_texparms_t parms = {0};
 		bzero(&parms, sizeof(rdpq_texparms_t));
 		parms.s.repeats = REPEAT_INFINITE;
@@ -365,181 +317,212 @@ int main(void) {
 		parms.s.mirror = true;
 		parms.t.mirror = true;
 
-		rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
-		for (int i = 0; i < 10; i++) {
-			for (int j = 0; j < 12; j++) {
-				int idx = (i * 12) + j;
-				int val = gMapArrows[idx].playerID;
-				if (val == 0) {
-					continue;
-				}
+		if (gLevelID != 0) {
+			rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
+			for (int i = 0; i < 10; i++) {
+				for (int j = 0; j < 12; j++) {
+					int idx = (i * 12) + j;
+					int val = gMapArrows[idx].playerID;
+					if (val == 0) {
+						continue;
+					}
 
-				color_t colour = gPlayerColours[val - 1];
-				float dir = gMapArrows[idx].dir * M_PI_2;
-				rdpq_set_prim_color(colour);
-				T3DMat4 mtx;
-				//float scale = fm_sinf((float) ticks / 5.0f) * 0.1f;
-				float x = ((int) 512 / (int) 12) * j;
-				float y = 0.0f;
-				float z = ((int) 512 / (int) 12) * i;
-				t3d_mat4_identity(&mtx);
-				T3DVec3 angle = {{0, 1, 0}};
-				t3d_mat4_rotate(&mtx, &angle, dir);
-				t3d_mat4_translate(&mtx, x - 258.0f + 22.0f, y, z - 258.0f + 22.0f);
-				//t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
-				t3d_mat4_to_fixed(&gArrowMtx[idx], &mtx);
-				data_cache_hit_writeback(&gArrowMtx[idx], sizeof(T3DMat4FP));
-				t3d_matrix_push(&gArrowMtx[idx]);
-				rspq_block_run(gArrowBlock);
-				t3d_matrix_pop(1);
-			}
-		}
-		
-		int basesPlaced = 0;
-		int mapid = 0;
-		for (int i = 0; i < 10; i++) {
-			for (int j = 0; j < 13; j++) {
-				if (map[mapid] >= 16 && map[mapid] < 24) {
-					color_t colour = gPlayerColours[basesPlaced];
+					color_t colour = gPlayerColours[val - 1];
+					float dir = gMapArrows[idx].dir * M_PI_2;
 					rdpq_set_prim_color(colour);
 					T3DMat4 mtx;
 					//float scale = fm_sinf((float) ticks / 5.0f) * 0.1f;
-					float x = ((int) 512 / (int) 12) * j;
-					float y = mapHeights[map[mapid] % 8];
-					float z = ((int) 512 / (int) 12) * i;
-					gBasePos[basesPlaced].x = x;
-					gBasePos[basesPlaced].z = z;
+					float x = j * 32;
+					float y = 0.0f;
+					float z = i * 32;
 					t3d_mat4_identity(&mtx);
 					T3DVec3 angle = {{0, 1, 0}};
-					t3d_mat4_translate(&mtx, x - 258.0f, y, z - 258.0f);
+					t3d_mat4_rotate(&mtx, &angle, dir);
+					t3d_mat4_translate(&mtx, x + 16.0f, y, z + 16.0f);
 					//t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
-					t3d_mat4_to_fixed(&gBaseMtx[basesPlaced], &mtx);
-					data_cache_hit_writeback(&gBaseMtx[basesPlaced], sizeof(T3DMat4FP));
-					t3d_matrix_push(&gBaseMtx[basesPlaced]);
-					rspq_block_run(gBaseBlock);
+					t3d_mat4_to_fixed(&gArrowMtx[idx], &mtx);
+					data_cache_hit_writeback(&gArrowMtx[idx], sizeof(T3DMat4FP));
+					t3d_matrix_push(&gArrowMtx[idx]);
+					rspq_block_run(gArrowBlock);
 					t3d_matrix_pop(1);
-					basesPlaced++;
-					if (basesPlaced == 4) {
-						goto baseSkip;
-					}
 				}
-				mapid++;
 			}
-		}
-		baseSkip:
+			
+			for (int i = 0; i < 4; i++) {
+				if (gBasePos[i].x == -1) {
+					continue;
+				}
+				color_t colour = gPlayerColours[i];
+				rdpq_set_prim_color(colour);
+				t3d_matrix_push(&gBaseMtx[i]);
+				rspq_block_run(gBaseBlock);
+				t3d_matrix_pop(1);
 
-		mapid = 0;
-		basesPlaced = 0;
-		for (int i = 0; i < 10; i++) {
-			for (int j = 0; j < 13; j++) {
-				if (map[mapid] >= 24 && map[mapid] < 32) {
-					rdpq_set_prim_color(RGBA32(0, 0, 0, 255));
+			}
+			rdpq_sync_pipe();
+
+			for (int i = 0; i < 8; i++) {
+				if (gSpawnerPos[i].x == -1) {
+					continue;
+				}
+				rdpq_set_prim_color(RGBA32(0, 0, 0, 255));
+				t3d_matrix_push(&gSpawnermtx[i]);
+				rspq_block_run(gBaseBlock);
+				t3d_matrix_pop(1);
+
+			}
+			rdpq_sync_pipe();
+			
+			rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
+			for (int i = 0; i < TROOP_COUNT; i++) {
+				if (gTroops[i].active == false) {
+					continue;
+				}
+
+				float dir = gTroops[i].dir * M_PI_2;
+				T3DMat4 mtx;
+				//float scale = fm_sinf((float) ticks / 5.0f) * 0.1f;
+				float x = gTroops[i].pos.x;
+				float y = gTroops[i].pos.y;
+				float z = gTroops[i].pos.z;
+				t3d_mat4_identity(&mtx);
+				T3DVec3 angle = {{0, 1, 0}};
+				t3d_mat4_rotate(&mtx, &angle, dir);
+				t3d_mat4_translate(&mtx, x + 16.0f, y, z + 16.0f);
+				//t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
+				t3d_mat4_to_fixed(&gTroopsMtx[i][gfxFlip], &mtx);
+				data_cache_hit_writeback(&gTroopsMtx[i][gfxFlip], sizeof(T3DMat4FP));
+				t3d_matrix_push(&gTroopsMtx[i][gfxFlip]);
+				switch (gTroops[i].type) {
+					case TROOP_NORMAL:
+						rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
+						break;
+					case TROOP_HOOLIGAN:
+						rdpq_set_prim_color(RGBA32(255, 127, 0, 255));
+						break;
+					case TROOP_25:
+						rdpq_set_prim_color(RGBA32(127, 127, 255, 255));
+						break;
+					case TROOP_50:
+						rdpq_set_prim_color(RGBA32(127, 255, 127, 255));
+						break;
+					case TROOP_ROULETTE:
+						rdpq_set_prim_color(RGBA32(255, 0, 255, 255));
+						break;
+				}
+				rspq_block_run(gArrowBlock);
+				t3d_matrix_pop(1);
+			}
+			rdpq_sync_pipe();
+
+			if (gGamePaused == false) {
+				rdpq_sprite_upload(TILE0, gCursorSprite, &parms);
+				for (int i = 0; i < gCursorCount; i++) {
+					rdpq_set_prim_color(gPlayerColours[i]);
 					T3DMat4 mtx;
-					float x = ((int) 512 / (int) 12) * j;
-					float y = mapHeights[map[mapid] % 8];
-					float z = ((int) 512 / (int) 12) * i;
-					gSpawnerPos[basesPlaced].x = x;
-					gSpawnerPos[basesPlaced].z = z;
-					//float scale = fm_sinf((float) ticks / 5.0f) * 0.1f;
+					float scale = fm_sinf((float) ticks / 5.0f) * 0.1f;
+					float x = fm_floorf(gPlayerCursors[i][0]) * 32.0f;
+					float y = 0.0f;
+					float z = fm_floorf(gPlayerCursors[i][2]) * 32.0f;
 					t3d_mat4_identity(&mtx);
-					T3DVec3 angle = {{0, 1, 0}};
-					t3d_mat4_translate(&mtx, x - 258.0f, y, z - 258.0f);
-					//t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
-					t3d_mat4_to_fixed(&gSpawnermtx[basesPlaced], &mtx);
-					data_cache_hit_writeback(&gSpawnermtx[basesPlaced], sizeof(T3DMat4FP));
-					t3d_matrix_push(&gSpawnermtx[basesPlaced]);
-					rspq_block_run(gBaseBlock);
+					t3d_mat4_translate(&mtx, x + 16.0f, y, z + 16.0f);
+					t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
+					t3d_mat4_to_fixed(&gCursorMtx[i][gfxFlip], &mtx);
+					data_cache_hit_writeback(&gCursorMtx[i][gfxFlip], sizeof(T3DMat4FP));
+					t3d_matrix_push(&gCursorMtx[i][gfxFlip]);
+					rspq_block_run(cursor);
 					t3d_matrix_pop(1);
-					basesPlaced++;
 				}
-				mapid++;
+				rdpq_sync_pipe();
+				rdpq_sprite_upload(TILE0, gPointerSprite, &parms);
+				for (int i = 0; i < gCursorCount; i++) {
+					rdpq_set_prim_color(gPlayerColours[i]);
+					T3DMat4 mtx;
+					float x = gPlayerPointers[i][0] * 32.0f;
+					float z = gPlayerPointers[i][1] * 32.0f;
+					t3d_mat4_identity(&mtx);
+					T3DVec3 angle = {{1, 0, 0}};
+					t3d_mat4_rotate(&mtx, &angle, 0);
+					t3d_mat4_translate(&mtx, x + 12.0f, 0.0f, z + 12.0f);
+					t3d_mat4_scale(&mtx, 0.75f, 1.0f, 0.75f);
+					t3d_mat4_to_fixed(&gPointerMtx[i][gfxFlip], &mtx);
+					data_cache_hit_writeback(&gPointerMtx[i][gfxFlip], sizeof(T3DMat4FP));
+					t3d_matrix_push(&gPointerMtx[i][gfxFlip]);
+					rspq_block_run(cursor);
+					t3d_matrix_pop(1);
+				}
+				rdpq_sync_pipe();
 			}
 		}
-		
-		rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
-		for (int i = 0; i < TROOP_COUNT; i++) {
-			if (gTroops[i].active == false) {
-				continue;
-			}
+		t3d_matrix_pop(1);
+		skipDraw:
 
-			float dir = gTroops[i].dir * M_PI_2;
-			T3DMat4 mtx;
-			//float scale = fm_sinf((float) ticks / 5.0f) * 0.1f;
-			float x = gTroops[i].pos.x;
-			float y = gTroops[i].pos.y;
-			float z = gTroops[i].pos.z;
-			t3d_mat4_identity(&mtx);
-			T3DVec3 angle = {{0, 1, 0}};
-			t3d_mat4_rotate(&mtx, &angle, dir);
-			t3d_mat4_translate(&mtx, x - 258.0f + 22.0f, y, z - 258.0f + 22.0f);
-			//t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
-			t3d_mat4_to_fixed(&gTroopsMtx[i][gfxFlip], &mtx);
-			data_cache_hit_writeback(&gTroopsMtx[i][gfxFlip], sizeof(T3DMat4FP));
-			t3d_matrix_push(&gTroopsMtx[i][gfxFlip]);
-			switch (gTroops[i].type) {
-				case TROOP_NORMAL:
-					rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
-					break;
-				case TROOP_HOOLIGAN:
-					rdpq_set_prim_color(RGBA32(255, 127, 0, 255));
-					break;
-				case TROOP_25:
-					rdpq_set_prim_color(RGBA32(127, 127, 255, 255));
-					break;
-				case TROOP_50:
-					rdpq_set_prim_color(RGBA32(127, 255, 127, 255));
-					break;
-				case TROOP_ROULETTE:
-					rdpq_set_prim_color(RGBA32(255, 0, 255, 255));
-					break;
-			}
-			rspq_block_run(gArrowBlock);
-			t3d_matrix_pop(1);
-		}
-
-		rdpq_sprite_upload(TILE0, gCursorSprite, &parms);
-		for (int i = 0; i < gCursorCount; i++) {
-			rdpq_set_prim_color(gPlayerColours[i]);
-			T3DMat4 mtx;
-			float scale = fm_sinf((float) ticks / 2.5f) * 0.1f;
-			float x = ((int) 512 / (int) 12) * gPlayerCursors[i][0];
-			float y = 0.0f;
-			float z = ((int) 512 / (int) 12) * gPlayerCursors[i][2];
-			t3d_mat4_identity(&mtx);
-			t3d_mat4_translate(&mtx, x - 258.0f + 22.0f, y, z - 258.0f + 22.0f);
-			t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
-			t3d_mat4_to_fixed(&gCursorMtx[i][gfxFlip], &mtx);
-			data_cache_hit_writeback(&gCursorMtx[i][gfxFlip], sizeof(T3DMat4FP));
-			t3d_matrix_push(&gCursorMtx[i][gfxFlip]);
-			rspq_block_run(cursor);
-			t3d_matrix_pop(1);
-		}
-		rdpq_sprite_upload(TILE0, gPointerSprite, &parms);
-		for (int i = 0; i < gCursorCount; i++) {
-			rdpq_set_prim_color(gPlayerColours[i]);
-			T3DMat4 mtx;
-			float x = ((int) 512 / (int) 12) * gPlayerPointers[i][0];
-			float z = ((int) 512 / (int) 12) * gPlayerPointers[i][1];
-			t3d_mat4_identity(&mtx);
-			T3DVec3 angle = {{1, 0, 0}};
-			t3d_mat4_rotate(&mtx, &angle, 0);
-			t3d_mat4_translate(&mtx, x - 258.0f + 16.0f, 0.0f, z - 258.0f + 16.0f);
-			t3d_mat4_scale(&mtx, 0.75f, 1.0f, 0.75f);
-			t3d_mat4_to_fixed(&gPointerMtx[i][gfxFlip], &mtx);
-			data_cache_hit_writeback(&gPointerMtx[i][gfxFlip], sizeof(T3DMat4FP));
-			t3d_matrix_push(&gPointerMtx[i][gfxFlip]);
-			rspq_block_run(cursor);
-			t3d_matrix_pop(1);
-		}
+		menu_render(updateRate, updateRateF);
 
     	rdpq_text_printf(NULL, 1, 16, 24, "FPS: %d (%2.1fms)", (int) ceilf(display_get_fps()), (double) (1000.0f / display_get_fps()));
     	rdpq_text_printf(NULL, 1, 16, 34, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
-    	rdpq_text_printf(NULL, 1, 16, 44, "Time: %02d:%02d", gGameTimer / (60 * 30), (gGameTimer / 30) % 60);
-    	rdpq_text_printf(NULL, 1, 16, 54, "POINTS:\n1: %d\n2: %d\n3: %d\n4: %d\n", gPoints[0], gPoints[1], gPoints[2], gPoints[3]);
 
 		rdpq_detach_show();
-		ticks++;
-		gGameTimer--;
+		ticks += updateRate;
+		if (gGamePaused == false && gMenuID == MENU_NONE) {
+			gGameTimer -= updateRate;
+			switch (gTimerStage) {
+				case 0:
+					if (gGameTimer < 60 * 60) {
+						gTimerStage++;
+						sound_play_global(SOUND_VOICE_TIMER_60);
+					}
+					break;
+				case 1:
+					if (gGameTimer < 60 * 30) {
+						gTimerStage++;
+						sound_play_global(SOUND_VOICE_TIMER_30);
+					}
+					break;
+				case 2:
+					if (gGameTimer < 60 * 10) {
+						gTimerStage++;
+						sound_play_global(SOUND_VOICE_TIMER_10);
+					}
+					break;
+				case 3:
+					if (gGameTimer < 60 * 5) {
+						gTimerStage++;
+						sound_play_global(SOUND_VOICE_TIMER_5);
+					}
+					break;
+				case 4:
+					if (gGameTimer < 60 * 4) {
+						gTimerStage++;
+						sound_play_global(SOUND_VOICE_TIMER_4);
+					}
+					break;
+				case 5:
+					if (gGameTimer < 60 * 3) {
+						gTimerStage++;
+						sound_play_global(SOUND_VOICE_TIMER_3);
+					}
+					break;
+				case 6:
+					if (gGameTimer < 60 * 2) {
+						gTimerStage++;
+						sound_play_global(SOUND_VOICE_TIMER_2);
+					}
+					break;
+				case 7:
+					if (gGameTimer < 60 * 1) {
+						gTimerStage++;
+						sound_play_global(SOUND_VOICE_TIMER_1);
+					}
+					break;
+			}
+			if (gGameTimer <= 0) {
+				gGamePaused = true;
+				sound_play_global(SOUND_VOICE_TIMER_FINISH);
+				gGameTimer = 0;
+				gMenuID = MENU_FINISH;
+			}
+		}
 
 		gfxFlip ^= 1;
     }

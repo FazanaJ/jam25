@@ -19,7 +19,7 @@ void ai_input_stick_y(int playerID, int stickY) {
 }
 
 void ai_input_button(int playerID, int button) {
-    gInputData[playerID].button[0][button] = 0;
+    gInputData[playerID].button[INPUT_PRESSED][button] = 0;
 }
 
 void ai_pick_spot(int playerID) {
@@ -89,7 +89,4 @@ void ai_run(int player) {
     }
 
     gAIUpdateTimes[player] = 120;
-
-    gAICursorTarget[player][0] = (rand() % 12);
-    gAICursorTarget[player][1] = (rand() % 10);
 }

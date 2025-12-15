@@ -26,6 +26,15 @@ enum InputButtons {
 
 };
 
+enum PlayerIDs {
+    PLAYER_NONE = -1,
+    PLAYER_1,
+    PLAYER_2,
+    PLAYER_3,
+    PLAYER_4,
+    PLAYER_ALL // Used for a combination of everybody's input.
+};
+
 enum InputType {
     INPUT_PRESSED,
     INPUT_HELD
@@ -74,4 +83,6 @@ void input_rumble(int padID, int timer);
 void input_clear(int padID, int input);
 int thread_input(void *param);
 void input_init(void);
+int input_port(int padID);
+int input_accessory(int padID);
 void input_reset(int padID);

@@ -1,3 +1,5 @@
 /filesystem
 /build
 *.z64
+*.blend1
+.DS_Store
