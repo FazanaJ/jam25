@@ -70,7 +70,7 @@ extern Input gInputData[5];
 extern uint8_t gDeadzone;
 extern uint8_t gStickRange;
 
-void input_update(void);
+void input_update(int updateRate);
 int input_pressed(int padID, int input, int numFrames);
 int input_held(int padID, int input, int numFrames);
 int input_released(int padID, int input, int numFrames);

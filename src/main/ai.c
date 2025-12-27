@@ -30,14 +30,14 @@ void ai_pick_spot(int playerID) {
     }
 }
 
-void ai_move(int player) {
+void ai_move(int player, int updateRate) {
     // Cursor target is set, so move towards it.
     if (gAICursorTarget[player][0] != gPlayerCursors[player][0] || gAICursorTarget[player][1] != gPlayerCursors[player][1]) {
         if (gAIStickVel[player] < 64) {
             if (gAIDifficulty[player] == AIDIFF_EASY) {
-                gAIStickVel[player] += 8;
+                gAIStickVel[player] += 4 * updateRate;
             } else if (gAIDifficulty[player] == AIDIFF_MEDIUM) {
-                gAIStickVel[player] += 16;
+                gAIStickVel[player] += 8 * updateRate;
             } else {
                 gAIStickVel[player] = 64;
             }
@@ -67,9 +67,9 @@ void ai_move(int player) {
     } else {
         if (gAIStickVel[player] > 0) {
             if (gAIDifficulty[player] == AIDIFF_EASY) {
-                gAIStickVel[player] -= 8;
+                gAIStickVel[player] -= 4 * updateRate;
             } else if (gAIDifficulty[player] == AIDIFF_MEDIUM) {
-                gAIStickVel[player] -= 16;
+                gAIStickVel[player] -= 8 * updateRate;
             } else {
                 gAIStickVel[player] = 0;
             }
@@ -80,11 +80,11 @@ void ai_move(int player) {
     }
 }
 
-void ai_run(int player) {
-    ai_move(player);
+void ai_run(int player, int updateRate) {
+    ai_move(player, updateRate);
 
     if (gAIUpdateTimes[player] > 0) {
-        gAIUpdateTimes[player]--;
+        gAIUpdateTimes[player] -= updateRate;
         return;
     }
 

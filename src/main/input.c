@@ -64,7 +64,7 @@ void input_reset(int padID) {
  * it considerably improves responsiveness to input.
  * The sticks are still polled here though, the extra precision isn't necessary.
  */
-void input_update(void) {
+void input_update(int updateRate) {
     int iter;
     int range;
     int deadzone;
@@ -88,7 +88,7 @@ void input_update(void) {
             }
         }
 
-        sPakDetectionTimer--;
+        sPakDetectionTimer -= updateRate;
         if (sPakDetectionTimer <= 0) {
             gInputData[k].pak = joypad_get_accessory_type(p);
             sPakDetectionTimer = 30;
@@ -130,8 +130,8 @@ void input_update(void) {
                 gInputData[PLAYER_ALL].button[INPUT_PRESSED][j] = 0;
                 pressed[j] = true;
             } else {
-                if (controller->button[INPUT_PRESSED][j] < 255) {
-                    controller->button[INPUT_PRESSED][j]++;
+                if (controller->button[INPUT_PRESSED][j] < 250) {
+                    controller->button[INPUT_PRESSED][j] += updateRate;
                     if (pressed[j] == false) {
                         gInputData[PLAYER_ALL].button[INPUT_PRESSED][j]++;
                         pressed[j] = true;
@@ -141,8 +141,8 @@ void input_update(void) {
         }
         for (int j = 0; j < INPUT_TOTAL; j++) {
             if (btn[INPUT_HELD] & (1 << j)) {
-                if (controller->button[INPUT_HELD][j] < 255) {
-                    controller->button[INPUT_HELD][j]++;
+                if (controller->button[INPUT_HELD][j] < 250) {
+                    controller->button[INPUT_HELD][j] += updateRate;
                     if (held[j] == false) {
                         gInputData[PLAYER_ALL].button[INPUT_HELD][j]++;
                         held[j] = true;
@@ -188,6 +188,12 @@ void input_update(void) {
             if (controller->stickMag[j] != 0.0f) {
                 //controller->stickAngle[j] = atan2s(controller->stick[j][STICK_Y], controller->stick[j][STICK_X]);
             }
+        }
+        if (gInputData[PLAYER_ALL].stick[STICK_LEFT][STICK_X] == 0) {
+            gInputData[PLAYER_ALL].stick[STICK_LEFT][STICK_X] = controller->stick[STICK_LEFT][STICK_X];
+        }
+        if (gInputData[PLAYER_ALL].stick[STICK_LEFT][STICK_Y] == 0) {
+            gInputData[PLAYER_ALL].stick[STICK_LEFT][STICK_Y] = controller->stick[STICK_LEFT][STICK_Y];
         }
         controller->type = CONTROLLER_N64;
     }
