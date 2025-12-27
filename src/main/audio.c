@@ -72,17 +72,22 @@ SoundData sSoundTable[SOUND_COUNT] = {
     {"rom://tutorial9.1.wav64", 10},
     {"rom://tutorial10.1.wav64", 10},
 
-    {"rom://keyboard.1.wav64", 10},
-    {"rom://keyboard.1.wav64", 10},
-    {"rom://keyboard.1.wav64", 10},
-    {"rom://keyboard.1.wav64", 10},
+    {"rom://arrow1.1.wav64", 10},
+    {"rom://arrow2.1.wav64", 10},
+    {"rom://arrow3.1.wav64", 10},
+    {"rom://arrow4.1.wav64", 10},
     
-    {"rom://keyboard.1.wav64", 10},
-    {"rom://keyboard.1.wav64", 10},
-    {"rom://keyboard.1.wav64", 10},
+    {"rom://onepoint.1.wav64", 10},
+    {"rom://explosion.1.wav64", 10},
+    {"rom://manypoints.1.wav64", 10},
+    {"rom://roulette.1.wav64", 10},
     {"rom://keyboard.1.wav64", 10},
 
-    {"rom://keyboard.1.wav64", 10},
+    {"rom://whoosh.1.wav64", 10},
+    {"rom://chalkselect.1.wav64", 10},
+    {"rom://chalkback.1.wav64", 10},
+    {"rom://logoappear.1.wav64", 10},
+    {"rom://logostay.1.wav64", 10},
 };
 
 SequenceData sSequenceTable[] = {

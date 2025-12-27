@@ -230,6 +230,9 @@ void game_run(int updateRate, float updateRateF) {
 	}
 	for (int i = 0; i < 8; i++) {
 		if (gSpawnerPos[i].x == -1) {
+			if (gSpawnerRuinID == i) {
+				gSpawnerRuinID = rand() % 8;
+			}
 			continue;
 		}
 
@@ -280,19 +283,19 @@ void game_run(int updateRate, float updateRateF) {
 							break;
 						case TROOP_HOOLIGAN:
 							gPoints[j] /= 2;
-							sound_play_channel(SOUND_TROOP_SECURE_HOOLIGAN, CHANNEL_ENV1);
+							sound_play_channel(SOUND_TROOP_SECURE_HOOLIGAN, CHANNEL_ENV2);
 							break;
 						case TROOP_25:
 							gPoints[j] += 25;
-							sound_play_channel(SOUND_TROOP_SECURE_SPECIAL, CHANNEL_ENV1);
+							sound_play_channel(SOUND_TROOP_SECURE_SPECIAL, CHANNEL_ENV2);
 							break;
 						case TROOP_50:
 							gPoints[j] += 50;
-							sound_play_channel(SOUND_TROOP_SECURE_SPECIAL, CHANNEL_ENV1);
+							sound_play_channel(SOUND_TROOP_SECURE_SPECIAL, CHANNEL_ENV2);
 							break;
 						case TROOP_ROULETTE:
 							gPoints[j] += 1;
-							sound_play_channel(SOUND_TROOP_SECURE_SPECIAL, CHANNEL_ENV1);
+							sound_play_channel(SOUND_TROOP_SECURE_ROULETTE, CHANNEL_ENV2);
 							break;
 					}
 					gTroops[i].active = false;

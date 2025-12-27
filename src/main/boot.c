@@ -151,7 +151,7 @@ void boot(void) {
 		t3d_tri_sync();
     gBaseBlock = rspq_block_end();
 
-	game_init(0, 0);
+	game_init(1, 0);
 	gGamePaused = true;
 	
 	gPlayerIDs[0] = PLAYER_NONE;

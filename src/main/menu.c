@@ -155,6 +155,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
         gPlayerIDs[2] = PLAYER_NONE;
         gPlayerIDs[3] = PLAYER_NONE;
         gGamePaused = true;
+        sound_play_global(SOUND_MENU_LOGO);
     } else if (gSubMenu == 1) {
         gTitleScreenVel += 0.005f * updateRateF;
         if (gTitleScreenVel > 0.1f) {
@@ -172,6 +173,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
         if (gTitleScreenScale < 1.0f) {
             gTitleScreenVel = 0.0f;
             gTitleScreenScale = 1.0f;
+            sound_play_global(SOUND_MENU_LOGO_LAND);
             gSubMenu = 3;
         }
     }
@@ -586,8 +588,8 @@ static void menu_start_countdown(int updateRate, float updateRateF) {
                 gMenuID = MENU_NONE;
                 gSubMenu = 0;
                 gSubMenuOpt = 0;
-                //gGameTimer = 60 * 60 * 3;
-                gGameTimer = 60 * 10; // TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
+                gGameTimer = 60 * 60 * 3;
+                //gGameTimer = 60 * 10; // TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP TEMP
                 gTimerStage = 0;
                 gGamePaused = false;
                 gScoreboardOffsetY = 64;
@@ -920,7 +922,7 @@ void hud_render(int updateRate, float updateRateF) {
                 menu_stick_options(PLAYER_ALL, NULL, &gMenuOption[0]);
 
                 if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
-                    sound_play_global(SOUND_MENU_ACCEPT);
+                    sound_play_global(SOUND_MENU_CHALKBACK);
                     input_clear(PLAYER_ALL, INPUT_A);
                     if (gMenuOption[0] == 0) {
                         gGamePaused = false;
@@ -929,7 +931,7 @@ void hud_render(int updateRate, float updateRateF) {
                         gMenuOption[1] = 1;
                     }
                 } else if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
-                    sound_play_global(SOUND_MENU_ACCEPT);
+                    sound_play_global(SOUND_MENU_CHALKBACK);
                     input_clear(PLAYER_ALL, INPUT_B);
                     gGamePaused = false;
                     gMenuOption[0] = 0;
@@ -941,7 +943,7 @@ void hud_render(int updateRate, float updateRateF) {
                 gMenuOption[0] = 2;
             }
             if (prevOption != gMenuOption[0]) {
-                sound_play_global(SOUND_MENU_MOVE);
+                sound_play_global(SOUND_MENU_CHALKSELECT);
             }
             int y = y0 + (76 * gScreenMul);
             for (int i = 0; i < 3; i++) {
@@ -971,7 +973,7 @@ void hud_render(int updateRate, float updateRateF) {
                 menu_stick_options(PLAYER_ALL, NULL, &gMenuOption[1]);
                 if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
                     input_clear(PLAYER_ALL, INPUT_A);
-                    sound_play_global(SOUND_MENU_ACCEPT);
+                    sound_play_global(SOUND_MENU_CHALKBACK);
                     if (gMenuOption[1] == 0) {
                         if (gMenuOption[0] == 1) {
                             gMenuOption[0] = 0;
@@ -993,7 +995,7 @@ void hud_render(int updateRate, float updateRateF) {
                 }
                 if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
                     input_clear(PLAYER_ALL, INPUT_B);
-                    sound_play_global(SOUND_MENU_BACK);
+                    sound_play_global(SOUND_MENU_CHALKBACK);
                     gPauseSub = 0;
                 }
             }
@@ -1003,7 +1005,7 @@ void hud_render(int updateRate, float updateRateF) {
                 gMenuOption[1] = 1;
             }
             if (prevOption != gMenuOption[1]) {
-                sound_play_global(SOUND_MENU_MOVE);
+                sound_play_global(SOUND_MENU_CHALKSELECT);
             }
             int y = y0 + (88 * gScreenMul);
             for (int i = 0; i < 2; i++) {
@@ -1187,6 +1189,7 @@ void menu_render(int updateRate, float updateRateF) {
             if (gGameTimer > 0) {
                 if (input_pressed(PLAYER_ALL, INPUT_START, 2)) {
                     input_clear(PLAYER_ALL, INPUT_START);
+                    sound_play_global(SOUND_MENU_CHALKBACK);
                     gGamePaused ^= 1;
                 }
             }

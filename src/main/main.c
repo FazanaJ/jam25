@@ -65,13 +65,13 @@ color_t gPlayerColours[] = {
 	RGBA32(255, 255, 64, 255),
 };
 
-T3DVec3 gMainMenuCameraPath[] = {
+T3DVec3 gMainMenuCameraPath[] = {{
 	{150, 100, 300},
-};
+}};
 
-T3DVec3 gMainMenuCameraPathFocus[] = {
+T3DVec3 gMainMenuCameraPathFocus[] = {{
 	{0, 20, 0},
-};
+}};
 
 float gPlayerCursors[4][3];
 float gPlayerPointers[4][2];
