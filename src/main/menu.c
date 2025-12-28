@@ -128,10 +128,8 @@ static void menu_render_title(int updateRate, float updateRateF) {
 
     if (gSubMenu == 0) {
         gMenuSprites[0] = sprite_load("rom://logo.ci8.sprite");
-        gMenuSprites[1] = sprite_load("rom://menuopt0.ci8.sprite");
-        gMenuSprites[2] = sprite_load("rom://menuopt1.ci8.sprite");
-        gMenuSprites[3] = sprite_load("rom://menuopt2.ci8.sprite");
-        gMenuSprites[4] = sprite_load("rom://menuopt3.ci8.sprite");
+        gMenuSprites[1] = sprite_load("rom://menuoptclosed.rgba32.sprite");
+        gMenuSprites[2] = sprite_load("rom://menuoptopen.rgba32.sprite");
         gMenuSprites[5] = sprite_load("rom://menuopt02.ci8.sprite");
         gMenuSprites[6] = sprite_load("rom://menuopt12.ci8.sprite");
         gMenuSprites[7] = sprite_load("rom://menuopt22.ci8.sprite");
@@ -241,20 +239,20 @@ static void menu_render_title(int updateRate, float updateRateF) {
     }
 
     if (gSubMenu == 4) {
-        int offset = 80 * gScreenMul;
+        int offset = 64 * gScreenMul;
         
         gTitleLogoX = lerpf(gTitleLogoX, display_get_width() / 2, 0.075f * updateRateF);
         gTitleLogoY = lerpf(gTitleLogoY, offset, 0.075f * updateRateF);
         gTitleOptionsY = lerpf(gTitleOptionsY, display_get_height() - (56 * gScreenMul), 0.1f * updateRateF);
-        gTitleScreenScale = lerpf(gTitleScreenScale, 0.75f, 0.075f * updateRateF);
+        gTitleScreenScale = lerpf(gTitleScreenScale, 0.5f, 0.075f * updateRateF);
 
-        if (gTitleScreenScale <= 0.76f) {
+        if (gTitleScreenScale <= 0.52f) {
             gSubMenu = 5;
         }
     }
 
     if (gSubMenu == 5) {
-        int offset = 80 * gScreenMul;
+        int offset = 64 * gScreenMul;
         gMenuOption[1] = 0;
 
         gTitleOptionsY = lerpf(gTitleOptionsY, display_get_height() - (56 * gScreenMul), 0.1f * updateRateF);
@@ -366,11 +364,14 @@ static void menu_render_title(int updateRate, float updateRateF) {
         const int gapsize = 64 * gScreenMul;
         int x = (display_get_width() - (3 * gapsize)) / 2;
         for (int i = 0; i < 4; i++) {
+            int open;
             float s;
             if (gMenuOption[0] == i) {
                 s = 1.25f;
+                open = true;
             } else {
                 s = 0.75f;
+                open = false;
             }
 
             if (gSubMenu >= 6) {
@@ -380,7 +381,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
             s /= gScreenDiv;
 
             if (gMenuOption[0] == i) {
-                gTitleOptionContentY[i] = lerpf(gTitleOptionContentY[i], 48, 0.2f * updateRateF);
+                gTitleOptionContentY[i] = lerpf(gTitleOptionContentY[i], 32, 0.2f * updateRateF);
             } else {
                 gTitleOptionContentY[i] = lerpf(gTitleOptionContentY[i], 0, 0.2f * updateRateF);
             }
@@ -390,17 +391,24 @@ static void menu_render_title(int updateRate, float updateRateF) {
             params.scale_y = gTitleOptionScale[i];
             int y = gTitleOptionsY + (fm_sinf((ticks + ((i & 1) * 7600)) / 30.0f) * 4);
             params.theta = fm_sinf((ticks + (i * 7600)) / 30.0f) * 0.05f;
-            rdpq_sprite_blit(gMenuSprites[1 + i], x, y + ((gTitleOptionContentY[i] * 0.75f) * gScreenMul), &params);
+            rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+            if (open) {
+                rdpq_sprite_blit(gMenuSprites[1 + open], x, y + ((gTitleOptionContentY[i] * 0.75f) * gScreenMul), &params);
+            }
 
-            if (gTitleOptionContentY[i] > 4) {
+            if (gTitleOptionContentY[i] > 12) {
                 rdpq_blitparms_t params2 = {0};
                 params2.cx = 32;
                 params2.cy = 38;
-                params2.scale_x = gTitleOptionScale[i] * ((float) gTitleOptionContentY[i] / 48.0f);
-                params2.scale_y = gTitleOptionScale[i] * ((float) gTitleOptionContentY[i] / 48.0f);
+                params2.scale_x = gTitleOptionScale[i] * ((float) gTitleOptionContentY[i] / 16.0f);
+                params2.scale_y = gTitleOptionScale[i] * ((float) gTitleOptionContentY[i] / 16.0f);
                 params2.theta = fm_sinf((ticks + ((i + 17) * 3600)) / 30.0f) * 0.05f;
                 int offY = (32 - gTitleOptionContentY[i] - ((fm_sinf((ticks + ((i & 1) * 7600)) / 30.0f) * 8))) * gScreenMul;
                 rdpq_sprite_blit(gMenuSprites[5 + i], x, y + offY, &params2);
+            }
+
+            if (open == false) {
+                rdpq_sprite_blit(gMenuSprites[1 + open], x, y + ((gTitleOptionContentY[i] * 0.75f) * gScreenMul), &params);
             }
 
             x += gapsize;

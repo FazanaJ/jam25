@@ -67,10 +67,10 @@ color_t gPlayerColours[] = {
 };
 
 T3DVec3 gMainMenuSelectCoords[] = {
-	{{100, 20, 0}},
-	{{100, 20, 50}},
-	{{-100, 20, 50}},
-	{{0, 20, 50}},
+	{{100, 20, -150}},
+	{{-50, 20, 0}},
+	{{75, 20, 25}},
+	{{100, 20, 80}},
 };
 
 T3DVec3 gMainMenuCameraPath[] = {
@@ -257,7 +257,7 @@ int main(void) {
 		game_run(updateRate, updateRateF);
 		audio_loop(updateRate, updateRateF);
 
-		t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(85.0f), 25.0f, 300.0f);
+		t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(85.0f), 12.0f, 250.0f);
 		t3d_viewport_look_at(&viewport, &gCameraPos, &gCameraFocus, &(T3DVec3){{0,1,0}});
 
 		// ======== Draw (3D) ======== //
@@ -311,9 +311,9 @@ int main(void) {
 				gCameraFocus.y = gMainMenuCameraPathFocus[camID].y;
 				gCameraFocus.z = gMainMenuCameraPathFocus[camID].z;
 			} else {
-				gCameraPos.x = 0;
-				gCameraPos.y = 30;
-				gCameraPos.z = 50;
+				gCameraPos.x = 25;
+				gCameraPos.y = 40;
+				gCameraPos.z = 75;
 				gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
 				gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
 				gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
@@ -322,7 +322,9 @@ int main(void) {
 			t3d_anim_update(&gArmyGatorAnims, updateRateF * 0.02f);
 			t3d_skeleton_update(&gArmyGatorSkel);
 			t3d_mat4_identity(&mtx);
-			t3d_mat4_translate(&mtx, 0, 0.0f, 0.0f);
+			T3DVec3 angle = {{0, 1, 0}};
+			t3d_mat4_rotate(&mtx, &angle, 1 * M_PI_2);
+			t3d_mat4_translate(&mtx, 25, 0.0f, -50.0f);
 			t3d_mat4_scale(&mtx, 0.5f, 0.5f, 0.5f);
 			t3d_mat4_to_fixed(&gBaseMtx[gfxFlip], &mtx);
 			data_cache_hit_writeback(&gBaseMtx[gfxFlip], sizeof(T3DMat4FP));

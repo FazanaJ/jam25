@@ -401,10 +401,12 @@ void game_init(int levelID, int playerCount) {
 		gMenuLevelModel = t3d_model_load("rom:/mainmenu.t3dm");
 		gArmyGatorModel = t3d_model_load("rom:/armygator_lp.t3dm");
 		gArmyGatorSkel = t3d_skeleton_create_buffered(gArmyGatorModel, 2);
-  		gArmyGatorAnims = t3d_anim_create(gArmyGatorModel, "Yappin");
+  		gArmyGatorAnims = t3d_anim_create(gArmyGatorModel, "sittingidle");
+		data_cache_writeback_invalidate_all();
 		t3d_anim_attach(&gArmyGatorAnims, &gArmyGatorSkel);
 		rspq_block_begin();
 			t3d_model_draw_skinned(gArmyGatorModel, &gArmyGatorSkel);
+			//t3d_model_draw(gArmyGatorModel);
 		gArmyGatorBlock = rspq_block_end();
 		rspq_block_begin();
 			t3d_model_draw(gMenuLevelModel);
