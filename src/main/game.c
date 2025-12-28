@@ -373,6 +373,15 @@ void level_free(void) {
 	}
 }
 
+void level_0_free(void) {
+	t3d_anim_destroy(&gArmyGatorAnims);
+	t3d_skeleton_destroy(&gArmyGatorSkel);
+	rspq_block_free(gArmyGatorBlock);
+	t3d_model_free(gArmyGatorModel);
+	rspq_block_free(gMenuModelBlock);
+	t3d_model_free(gMenuLevelModel);
+}
+
 void game_init(int levelID, int playerCount) {
 
 	rspq_call_deferred((void *) level_free, NULL);
@@ -404,12 +413,8 @@ void game_init(int levelID, int playerCount) {
     }
 
 	if (gArmyGatorBlock) {
-		t3d_anim_destroy(&gArmyGatorAnims);
-		t3d_skeleton_destroy(&gArmyGatorSkel);
-		rspq_block_free(gArmyGatorBlock);
-		t3d_model_free(gArmyGatorModel);
-		rspq_block_free(gMenuModelBlock);
-		t3d_model_free(gMenuLevelModel);
+		rspq_call_deferred((void *) level_0_free, NULL);
+		rspq_wait();
 		gArmyGatorBlock = NULL;
 	}
 

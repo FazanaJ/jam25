@@ -193,6 +193,9 @@ static void menu_render_title(int updateRate, float updateRateF) {
                 gAttractLevelTimer = 0;
                 gAttractLevelID = (rand() % LEVEL_COUNT) - 1;
             }
+            if (gLevelID != 0) {
+                game_init(0, gPlayerCount);
+            }
         } else {
             gTitleLogoX = lerpf(gTitleLogoX, display_get_width() / 2, 0.075f * updateRateF);
             gTitleLogoY = lerpf(gTitleLogoY, display_get_height() / 2, 0.075f * updateRateF);
@@ -307,7 +310,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                             int port = input_port(i);
                             for (int j = 0; j < 4; j++) {
                                 if (gPlayerIDs[j] == port) {
-                                    sound_play_global(SOUND_MENU_BACK);
+                                    sound_play_global(SOUND_MENU_CONTROLLER_OFF);
                                     gPlayerIDs[j] = PLAYER_NONE;
                                     break;
                                 }
@@ -420,6 +423,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
         if (gSubMenu == 7) {
             gTitleOptionsY = lerpf(gTitleOptionsY, 0, 0.1f * updateRateF);
             if (input_pressed(PLAYER_ALL, INPUT_START, 2)) {
+                sound_play_global(SOUND_MENU_ACCEPT);
                 gSubMenu = 11;
             }
         }
@@ -450,7 +454,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                         for (int j = 0; j < 4; j++) {
                             if (gPlayerIDs[j] == PLAYER_NONE) {
                                 gPlayerIDs[j] = port;
-                                sound_play_global(SOUND_MENU_ACCEPT);
+                                sound_play_global(SOUND_MENU_CONTROLLER_ON);
                                 break;
                             }
                         }
@@ -509,6 +513,9 @@ static void menu_render_title(int updateRate, float updateRateF) {
         if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
             input_clear(PLAYER_ALL, INPUT_B);
             sound_play_global(SOUND_MENU_BACK);
+            if (gLevelID != 0) {
+                game_init(0, gPlayerCount);
+            }
             gSubMenu = 7;
         } else if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
             input_clear(PLAYER_ALL, INPUT_A);
@@ -985,6 +992,7 @@ void hud_render(int updateRate, float updateRateF) {
                         } else {
                             gMenuID = MENU_TITLE;
                             gSubMenu = 0;
+                            game_init(0, gPlayerCount);
                             gSubMenuOpt = 0;
                             gMenuOption[0] = 0;
                             gMenuOption[1] = 0;
@@ -1068,7 +1076,7 @@ void menu_game_finish(int updateRate, float updateRateF) {
 
                 if (alpha == 255) {
                     gSubMenu = 2;
-                    game_init(gLevelID, gPlayerCount);
+                    game_init(0, gPlayerCount);
                     gSubMenuOpt = 120;
                 }
             }

@@ -16,9 +16,9 @@ float gSoundVolume;
 static xm64player_t sXMPlayer;
 
 SoundData sSoundTable[SOUND_COUNT] = {
-    {"rom://shell1.1.wav64", 10},
-    {"rom://mouseclick.1.wav64", 10},
-    {"rom://keyboard.1.wav64", 10},
+    {"rom://menuselect.1.wav64", 10},
+    {"rom://logostay.1.wav64", 10},
+    {"rom://menuback.1.wav64", 10},
 
     {"rom://count3.1.wav64", 10},
     {"rom://count2.1.wav64", 10},
@@ -88,6 +88,9 @@ SoundData sSoundTable[SOUND_COUNT] = {
     {"rom://chalkback.1.wav64", 10},
     {"rom://logoappear.1.wav64", 10},
     {"rom://logostay.1.wav64", 10},
+
+    {"rom://connect.1.wav64", 10},
+    {"rom://disconnect.1.wav64", 10},
 };
 
 SequenceData sSequenceTable[] = {

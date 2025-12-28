@@ -44,6 +44,7 @@ int gGamePaused;
 float gMapOffsetX;
 T3DVec3 gCameraPos;
 T3DVec3 gCameraFocus;
+float gCameraPhase = 5;
 
 TroopObj gTroops[TROOP_COUNT];
 
@@ -65,13 +66,28 @@ color_t gPlayerColours[] = {
 	RGBA32(255, 255, 64, 255),
 };
 
-T3DVec3 gMainMenuCameraPath[] = {{
-	{150, 100, 300},
-}};
+T3DVec3 gMainMenuSelectCoords[] = {
+	{{100, 20, 0}},
+	{{100, 20, 50}},
+	{{-100, 20, 50}},
+	{{0, 20, 50}},
+};
 
-T3DVec3 gMainMenuCameraPathFocus[] = {{
-	{0, 20, 0},
-}};
+T3DVec3 gMainMenuCameraPath[] = {
+	{{150, 100, 300}},
+	{{0, 100, 300}},
+	{{-65, 50, 200}},
+	{{-65, 50, 100}},
+	{{0, 50, 0}},
+};
+
+T3DVec3 gMainMenuCameraPathFocus[] = {
+	{{0, 20, 0}},
+	{{0, 20, 0}},
+	{{-65, 20, 0}},
+	{{-65, 20, 0}},
+	{{0, 20, -100}},
+};
 
 float gPlayerCursors[4][3];
 float gPlayerPointers[4][2];
@@ -286,12 +302,22 @@ int main(void) {
 
 		if (gLevelID == 0 && gArmyGatorBlock) {
 			T3DMat4 mtx;
-			gCameraPos.x = 150;
-			gCameraPos.y = 100;
-			gCameraPos.z = 300;
-			gCameraFocus.x = 0;
-			gCameraFocus.y = 20;
-			gCameraFocus.z = 0;
+			int camID = gCameraPhase;
+			if (gCameraPhase < 5.0f) {
+				gCameraPos.x = gMainMenuCameraPath[camID].x;
+				gCameraPos.y = gMainMenuCameraPath[camID].y;
+				gCameraPos.z = gMainMenuCameraPath[camID].z;
+				gCameraFocus.x = gMainMenuCameraPathFocus[camID].x;
+				gCameraFocus.y = gMainMenuCameraPathFocus[camID].y;
+				gCameraFocus.z = gMainMenuCameraPathFocus[camID].z;
+			} else {
+				gCameraPos.x = 0;
+				gCameraPos.y = 30;
+				gCameraPos.z = 50;
+				gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
+				gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
+				gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
+			}
 			rdpq_mode_zbuf(true, true);
 			t3d_anim_update(&gArmyGatorAnims, updateRateF * 0.02f);
 			t3d_skeleton_update(&gArmyGatorSkel);

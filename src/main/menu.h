@@ -2,6 +2,7 @@
 
 extern int gScreenMul;
 extern int gScreenDiv;
+extern int gMenuOption[4];
 
 enum MenuIDs {
     MENU_NONE,
