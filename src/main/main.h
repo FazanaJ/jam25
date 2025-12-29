@@ -99,6 +99,7 @@ extern T3DVec3 gCameraPos;
 extern T3DVec3 gCameraFocus;
 extern LevelData *gCurrentLevel;
 extern float gMapOffsetX;
+extern int gClearblack;
 
 extern LevelData gMapLevel2[];
 extern uint8_t gMapLevelHeights[];

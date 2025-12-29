@@ -45,6 +45,7 @@ float gMapOffsetX;
 T3DVec3 gCameraPos;
 T3DVec3 gCameraFocus;
 float gCameraPhase = 5;
+int gClearblack;
 
 TroopObj gTroops[TROOP_COUNT];
 
@@ -201,7 +202,22 @@ rspq_block_t *gBackgroundBlock;
 void bg_render(void) {
 	if (gLevelID == 0 || fabsf(gMapOffsetX) > 2.0f) {
 		t3d_screen_clear_depth();
-		//t3d_screen_clear_color(RGBA32(96, 180, 224, 255));
+		if (gClearblack) {
+			rdpq_set_scissor(0, 0, display_get_width() , display_get_height());
+			gClearblack--;
+			rdpq_set_mode_fill(RGBA32(0, 0, 0, 255));
+			rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
+			rdpq_set_mode_standard();
+		} else {
+			rdpq_set_mode_fill(RGBA32(96, 180, 224, 255));
+			if (gLevelID == 0) {
+				rdpq_fill_rectangle(12, 12, display_get_width() - 12, display_get_height() - 12);
+			} else {
+				rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
+			}
+			rdpq_set_mode_standard();
+			//t3d_screen_clear_color(RGBA32(96, 180, 224, 255));
+		}
 		return;
 	}
 	if (gBackgroundBlock == NULL) {
@@ -299,11 +315,13 @@ int main(void) {
 		rdpq_attach(display_get(), display_get_zbuf());
 		t3d_frame_start();
 		t3d_viewport_attach(&viewport);
+		bg_render();
     	if (gLevelID == 0) {
 			rdpq_set_scissor(12, 12, display_get_width() - 12, display_get_height() - 12);
+		} else {
+			rdpq_set_scissor(0, 0, display_get_width() , display_get_height());
 		}
 
-		bg_render();
 
 		t3d_light_set_ambient(colorAmbient);
 		t3d_light_set_directional(0, colorDir, &lightDirVec);

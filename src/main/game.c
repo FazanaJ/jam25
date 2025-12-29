@@ -411,6 +411,7 @@ void game_init(int levelID, int playerCount) {
 		rspq_block_begin();
 			t3d_model_draw(gMenuLevelModel);
 		gMenuModelBlock = rspq_block_end();
+		gClearblack = 3;
         return;
     }
 
@@ -589,31 +590,32 @@ void game_init(int levelID, int playerCount) {
 				int idx = (i * 12) + j;
 				if (gCurrentLevel->wallTiles[idx] != 0 && gCurrentLevel->wallTextures[idx] == k) {
 					int type = gCurrentLevel->wallTiles[idx];
-					if (type == 3 || type == 4) {
-						if (map_wall_tile(j - 1, i)) {
-							verts += 6;
-							tris += 4;
-						}
+					int alwaysX;
+					int alwaysZ;
+
+					if (map_wall_tile(j + 1, i)) {
+						alwaysX = true;
 					} else {
-						if (map_wall_tile(j + 1, i)) {
-							verts += 6;
-							tris += 4;
+						if ((type == 3 || type == 4) && map_wall_tile(j - 1, i)) {
+							alwaysX = true;
+						} else {
+							alwaysX = false;
 						}
 					}
 					if (map_wall_tile(j, i + 1)) {
-						verts += 6;
-						tris += 4;
-					}
-					if (type == 2 || type == 4) {
-						if (map_wall_tile(j, i - 1)) {
-							verts += 6;
-							tris += 4;
-						}
+						alwaysZ = true;
 					} else {
-						if (map_wall_tile(j, i + 1)) {
-							verts += 6;
-							tris += 4;
+						if ((type == 2 || type == 4) && map_wall_tile(j, i - 1)) {
+							alwaysZ = true;
+						} else {
+							alwaysZ = false;
 						}
+					}
+					if (alwaysX) {
+						verts += 6;
+					}
+					if (alwaysZ) {
+						verts += 6;
 					}
 				}
 			}
