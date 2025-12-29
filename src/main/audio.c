@@ -94,15 +94,16 @@ SoundData sSoundTable[SOUND_COUNT] = {
 };
 
 SequenceData sSequenceTable[] = {
-    {"rom://ToysXM-8bit.xm64", 8},
+    {"rom://kamel.xm64", 12},
     {"rom://racer.xm64", 3},
 };
 
 void audio_boot(void) {
     audio_init(AUDIO_FREQUENCY, MIXER_BUFFER_SIZE);
     wav64_init_compression(3);
-    mixer_init(24);
-    gSoundChannelNum = 24;
+    mixer_init(32);
+    gSoundChannelNum = 32;
+    gMusicVolume = 1.0f;
     bzero(&gSoundPrioTable, sizeof(gSoundPrioTable));
 
     for (int i = 0; i < SOUND_COUNT; i++) {
@@ -116,7 +117,8 @@ void audio_boot(void) {
 }
 
 void music_play(int seqID, int fadeTime) {
-
+    sNextSequenceID = seqID;
+    sSequenceFadeTimer = fadeTime;
 }
 
 void sound_play_global(int soundID) {
@@ -188,7 +190,7 @@ static void update_sequence(int updateRate) {
                 SequenceData *s = &sSequenceTable[sNextSequenceID];
                 xm64player_open(&sXMPlayer, s->seqPath);
                 xm64player_set_vol(&sXMPlayer, gMusicVolume);
-                xm64player_play(&sXMPlayer, gSoundChannelNum - s->channelCount);
+                xm64player_play(&sXMPlayer, 12);
                 for (int i = gSoundChannelNum - s->channelCount; i < CHANNEL_MAX_NUM; i++) {
                     gChannelVol[i] = 1.0f;
                 }

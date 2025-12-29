@@ -201,7 +201,7 @@ rspq_block_t *gBackgroundBlock;
 void bg_render(void) {
 	if (gLevelID == 0 || fabsf(gMapOffsetX) > 2.0f) {
 		t3d_screen_clear_depth();
-		t3d_screen_clear_color(RGBA32(96, 180, 224, 255));
+		//t3d_screen_clear_color(RGBA32(96, 180, 224, 255));
 		return;
 	}
 	if (gBackgroundBlock == NULL) {
@@ -231,6 +231,41 @@ void bg_render(void) {
 		gBackgroundBlock = rspq_block_end();
 	}
 	rspq_block_run(gBackgroundBlock);
+}
+
+static inline void t3d_model_bvh(const T3DModel* model, T3DModelDrawConf conf)
+{
+  T3DModelState state = t3d_model_state_create();
+  state.drawConf = &conf;
+  int balls = 0;
+
+  T3DModelIter it = t3d_model_iter_create(model, T3D_CHUNK_TYPE_OBJECT);
+  while(t3d_model_iter_next(&it))
+  {
+    if((conf.filterCb && !conf.filterCb(conf.userData, it.object)) || it.object->isVisible == false) {
+      continue;
+    }
+	balls++;
+
+    if(it.object->material) {
+      t3d_model_draw_material(it.object->material, &state);
+    }
+    t3d_model_draw_object(it.object, conf.matrices);
+	
+	it.object->isVisible = false;
+  }
+
+  debugf("Main menu rendered %d parts\n", balls);
+
+  if(state.lastVertFXFunc != T3D_VERTEX_FX_NONE)t3d_state_set_vertex_fx(T3D_VERTEX_FX_NONE, 0, 0);
+}
+
+static inline void t3d_model_bvh_draw(const T3DModel* model) {
+  t3d_model_bvh(model, (T3DModelDrawConf){
+    .userData = NULL,
+    .tileCb = NULL,
+    .filterCb = NULL
+  });
 }
 
 int main(void) {
@@ -264,6 +299,9 @@ int main(void) {
 		rdpq_attach(display_get(), display_get_zbuf());
 		t3d_frame_start();
 		t3d_viewport_attach(&viewport);
+    	if (gLevelID == 0) {
+			rdpq_set_scissor(12, 12, display_get_width() - 12, display_get_height() - 12);
+		}
 
 		bg_render();
 
@@ -281,7 +319,11 @@ int main(void) {
 		data_cache_hit_writeback(&gMapMtx[gfxFlip], sizeof(T3DMat4FP));
 		t3d_matrix_push(&gMapMtx[gfxFlip]);
 		rdpq_set_mode_standard();
-		rdpq_mode_antialias(AA_STANDARD);
+		if (gLevelID == 0) {
+			rdpq_mode_antialias(AA_NONE);
+		} else {
+			rdpq_mode_antialias(AA_STANDARD);
+		}
 		rdpq_mode_filter(FILTER_BILINEAR);
 		rdpq_mode_persp(true);
 		for (int i = 0; i < 16; i++) {
@@ -333,7 +375,9 @@ int main(void) {
 				rspq_block_run(gArmyGatorBlock);
 			t3d_matrix_pop(1);
 			rdpq_sync_pipe();
-			rspq_block_run(gMenuModelBlock);
+			const T3DBvh *bvh = t3d_model_bvh_get(gMenuLevelModel);
+			t3d_model_bvh_query_frustum(bvh, &viewport.viewFrustum);
+			t3d_model_bvh_draw(gMenuLevelModel);
 			rdpq_sync_pipe();
 			rdpq_mode_zbuf(false, false);
 		}

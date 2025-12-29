@@ -340,8 +340,6 @@ static void menu_render_title(int updateRate, float updateRateF) {
     rdpq_mode_filter(FILTER_BILINEAR);
     rdpq_set_prim_color(RGBA32(0, 0, 0, 127));
     rdpq_sprite_blit(gMenuSprites[0], gTitleLogoX + shadowOff, gTitleLogoY + shadowOff, &params);
-    rdpq_mode_blender(0);
-    rdpq_mode_alphacompare(4);
     rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
     rdpq_sprite_blit(gMenuSprites[0], gTitleLogoX, gTitleLogoY, &params);
 
