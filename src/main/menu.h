@@ -9,6 +9,7 @@ enum MenuIDs {
     MENU_TITLE,
     MENU_START_COUNTDOWN,
     MENU_FINISH,
+    MENU_LOGOS,
 };
 
 void menu_render(int updateRate, float updateRateF);

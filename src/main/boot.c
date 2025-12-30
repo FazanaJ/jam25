@@ -63,7 +63,7 @@ void boot(void) {
 	gLevelSprites[1] = sprite_load("rom://stone.ci4.sprite");
 	gLevelSprites[2] = sprite_load("rom://grass0.rgba16.sprite");
 
-	gMenuID = MENU_TITLE;
+	gMenuID = MENU_LOGOS;
 
 	rdpq_texparms_t parms = {0};
 	parms.s.mirror = true;
@@ -151,7 +151,7 @@ void boot(void) {
 		t3d_tri_sync();
     gBaseBlock = rspq_block_end();
 
-	game_init(0, 0);
+	//game_init(0, 0);
 	gGamePaused = true;
 	
 	gPlayerIDs[0] = PLAYER_NONE;

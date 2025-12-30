@@ -1180,6 +1180,28 @@ void menu_game_finish(int updateRate, float updateRateF) {
     }
 }
 
+#define LOGO_TIMER 60
+
+void menu_logos(int updateRate, float updateRateF) {
+    if (gSubMenu == 0) {
+        gTitleAttractTimer = 0;
+        gSubMenu = 1;
+    }
+
+    if (gSubMenu == 1) {
+        gTitleAttractTimer += updateRate;
+        if (gTitleAttractTimer > LOGO_TIMER) {
+            game_init(0, 0);
+            gSubMenu = 0;
+            gTitleAttractTimer = 0;
+            gMenuID = MENU_TITLE;
+        }
+        rdpq_set_mode_fill(RGBA32(0, 0, 0, 255));
+        rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
+        rdpq_text_print(NULL, 1, 32, 64, "Fazana :))");
+    }
+}
+
 void menu_render(int updateRate, float updateRateF) {
     gMenuFlickerTimer += updateRate;
     if (gMenuFlickerTimer > 30) {
@@ -1217,6 +1239,9 @@ void menu_render(int updateRate, float updateRateF) {
             break;
         case MENU_FINISH:
             menu_game_finish(updateRate, updateRateF);
+            break;
+        case MENU_LOGOS:
+            menu_logos(updateRate, updateRateF);
             break;
     }
 
