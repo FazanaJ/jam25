@@ -119,3 +119,4 @@ extern T3DModel *gMenuLevelModel;
 extern rspq_block_t *gMenuModelBlock;
 
 float lerpf(float a, float b, float f);
+void reset_game_time(void);

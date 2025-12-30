@@ -561,9 +561,7 @@ static void menu_start_countdown(int updateRate, float updateRateF) {
         gTitleOptionContentY[2] = 0;
         gTitleOptionContentY[3] = 0;
         gMenuOption[0] = 40;
-        gMenuOption[1] = 40;
-        gMenuOption[2] = 40;
-        gMenuOption[3] = 40;
+        gSubMenuOpt = 40;
         gPauseSub = 0;
         sound_play_global(SOUND_VOICE_COUNTDOWN_3);
         int counted[4] = {0};
@@ -596,6 +594,7 @@ static void menu_start_countdown(int updateRate, float updateRateF) {
                 if (gSubMenu < 4)
                 sound_play_global(SOUND_VOICE_COUNTDOWN_3 + gSubMenu);
                 gSubMenu++;
+                gMenuOption[gSubMenu - 1] = 40;
                 gSubMenuOpt = 0;
             } else {
                 gMenuID = MENU_NONE;
@@ -1214,7 +1213,7 @@ void menu_render(int updateRate, float updateRateF) {
         gPrevMenu = gMenuID;
         for (int i = 0; i < 16; i++) {
             if (gMenuSprites[i]) {
-                //sprite_free(gMenuSprites[i]);
+                sprite_free(gMenuSprites[i]);
                 gMenuSprites[i] = NULL;
             }
         }

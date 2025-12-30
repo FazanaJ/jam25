@@ -103,7 +103,7 @@ void audio_boot(void) {
     wav64_init_compression(3);
     mixer_init(32);
     gSoundChannelNum = 32;
-    gMusicVolume = 1.0f;
+    gMusicVolume = 0.4f;
     bzero(&gSoundPrioTable, sizeof(gSoundPrioTable));
 
     for (int i = 0; i < SOUND_COUNT; i++) {

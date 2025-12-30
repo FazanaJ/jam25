@@ -873,4 +873,5 @@ void game_init(int levelID, int playerCount) {
 			}
 		}
 	}
+	reset_game_time();
 }
