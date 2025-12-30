@@ -185,14 +185,12 @@ static void menu_render_title(int updateRate, float updateRateF) {
             gTitleLogoX = lerpf(gTitleLogoX, display_get_width() - offset, 0.025f * updateRateF);
             gTitleLogoY = lerpf(gTitleLogoY, offset, 0.025f * updateRateF);
             gTitleScreenScale = lerpf(gTitleScreenScale, 0.33f, 0.025f * updateRateF);
-            //gAttractLevelTimer += updateRate;
+            gAttractLevelTimer += updateRate;
             gGamePaused = false;
             if (gAttractLevelTimer > 60 * 20) {
                 gAttractLevelTimer = 0;
                 gAttractLevelID = (rand() % LEVEL_COUNT) - 1;
-            }
-            if (gLevelID != 0) {
-                game_init(0, gPlayerCount);
+                gLevelID = -1;
             }
         } else {
             gTitleLogoX = lerpf(gTitleLogoX, display_get_width() / 2, 0.075f * updateRateF);
@@ -202,6 +200,10 @@ static void menu_render_title(int updateRate, float updateRateF) {
             if (gGamePaused == false) {
                 game_init(gLevelID, 0);
             }
+                if (gLevelID != 0 && gAttractLevelID != 0) {
+                    game_init(0, gPlayerCount);
+                }
+            gAttractLevelID = 0;
             gGamePaused = true;
             gAttractLevelTimer = 0;
         }

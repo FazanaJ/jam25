@@ -44,7 +44,7 @@ int gGamePaused;
 float gMapOffsetX;
 T3DVec3 gCameraPos;
 T3DVec3 gCameraFocus;
-float gCameraPhase = 5;
+float gCameraPhase = 0;
 int gClearblack;
 
 TroopObj gTroops[TROOP_COUNT];
@@ -76,18 +76,12 @@ T3DVec3 gMainMenuSelectCoords[] = {
 
 T3DVec3 gMainMenuCameraPath[] = {
 	{{150, 100, 300}},
-	{{0, 100, 300}},
-	{{-65, 50, 200}},
-	{{-65, 50, 100}},
-	{{0, 50, 0}},
+	{{20, 40, 75}},
 };
 
 T3DVec3 gMainMenuCameraPathFocus[] = {
 	{{0, 20, 0}},
-	{{0, 20, 0}},
-	{{-65, 20, 0}},
-	{{-65, 20, 0}},
-	{{0, 20, -100}},
+	{{100, 20, -150}},
 };
 
 float gPlayerCursors[4][3];
@@ -362,14 +356,27 @@ int main(void) {
 
 		if (gLevelID == 0 && gArmyGatorBlock) {
 			T3DMat4 mtx;
-			int camID = gCameraPhase;
-			if (gCameraPhase < 5.0f) {
-				gCameraPos.x = gMainMenuCameraPath[camID].x;
-				gCameraPos.y = gMainMenuCameraPath[camID].y;
-				gCameraPos.z = gMainMenuCameraPath[camID].z;
-				gCameraFocus.x = gMainMenuCameraPathFocus[camID].x;
-				gCameraFocus.y = gMainMenuCameraPathFocus[camID].y;
-				gCameraFocus.z = gMainMenuCameraPathFocus[camID].z;
+			int camID = fm_floorf(gCameraPhase);
+			if (gSubMenu < 4 || gCameraPhase < 1.0f) {
+				int camID1 = fm_floorf(gCameraPhase) + 1;
+				if (gSubMenu < 4) {
+					gCameraPhase -= 0.03f * updateRateF;
+					if (gCameraPhase < 0.0f) {
+						gCameraPhase = 0.0f;
+					}
+				} else {
+					gCameraPhase += 0.03f * updateRateF;
+					if (gCameraPhase > 1.0f) {
+						gCameraPhase = 1.0f;
+					}
+				}
+				float lp = gCameraPhase;
+				gCameraPos.x = lerpf(gMainMenuCameraPath[camID].x, gMainMenuCameraPath[camID1].x, lp);
+				gCameraPos.y = lerpf(gMainMenuCameraPath[camID].y, gMainMenuCameraPath[camID1].y, lp);
+				gCameraPos.z = lerpf(gMainMenuCameraPath[camID].z, gMainMenuCameraPath[camID1].z, lp);
+				gCameraFocus.x = lerpf(gMainMenuCameraPathFocus[camID].x, gMainMenuCameraPathFocus[camID1].x, lp);
+				gCameraFocus.y = lerpf(gMainMenuCameraPathFocus[camID].y, gMainMenuCameraPathFocus[camID1].y, lp);
+				gCameraFocus.z = lerpf(gMainMenuCameraPathFocus[camID].z, gMainMenuCameraPathFocus[camID1].z, lp);
 			} else {
 				gCameraPos.x = 25;
 				gCameraPos.y = 40;
