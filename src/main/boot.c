@@ -25,7 +25,7 @@ void boot(void) {
 	gCameraPos.v[1] = 250;
 	gCameraPos.v[2] = 100;
 
-    display_init(RESOLUTION_320x240, DEPTH_16_BPP, 3, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS);
+    display_init(RESOLUTION_320x240, DEPTH_16_BPP, 3, GAMMA_NONE, FILTERS_RESAMPLE_ANTIALIAS_DEDITHER);
 	if (display_get_height() == 480) {
 		gScreenMul = 2;
 		gScreenDiv = 1;
@@ -39,6 +39,8 @@ void boot(void) {
 	audio_boot();
     t3d_init((T3DInitParams){});
     rdpq_text_register_font(FONT_BUILTIN_DEBUG_MONO, rdpq_font_load_builtin(FONT_BUILTIN_DEBUG_MONO));
+	gFonts[0] = rdpq_font_load("rom://corn.font64");
+    rdpq_text_register_font(2, gFonts[0]);
 
 	gCursorSprite = sprite_load("rom://cursor.i4.sprite");
 	gArrowSprite = sprite_load("rom://arrow.i4.sprite");

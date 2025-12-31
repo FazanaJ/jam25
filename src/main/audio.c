@@ -2,6 +2,7 @@
 #include <malloc.h>
 
 #include "audio.h"
+#include "main.h"
 
 char gSoundChannelNum = 0;
 char gSoundPrioTable[32];
@@ -158,6 +159,9 @@ void sound_play(int soundID) {
 }
 
 void sound_play_channel(int soundID, int channel) {
+    if (gLevelID == 0) {
+        return;
+    }
     wav64_play(&sSoundTable[soundID].sound, channel);
 }
 

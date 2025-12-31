@@ -46,6 +46,7 @@ T3DVec3 gCameraPos;
 T3DVec3 gCameraFocus;
 float gCameraPhase = 0;
 int gClearblack;
+rdpq_font_t *gFonts[4];
 
 TroopObj gTroops[TROOP_COUNT];
 
@@ -67,21 +68,28 @@ color_t gPlayerColours[] = {
 	RGBA32(255, 255, 64, 255),
 };
 
-T3DVec3 gMainMenuSelectCoords[] = {
-	{{100, 20, -150}},
-	{{-50, 20, 0}},
-	{{75, 20, 25}},
-	{{100, 20, 80}},
-};
-
 T3DVec3 gMainMenuCameraPath[] = {
 	{{150, 100, 300}},
-	{{20, 40, 75}},
+	{{25, 40, 75}},
+
+	{{110, 25, -90}},
+	{{-80, 35, -85}},
+	{{60, 35, 65}},
+	{{80, 35, 78}},
+	{{80, 35, 78}},
 };
 
 T3DVec3 gMainMenuCameraPathFocus[] = {
 	{{0, 20, 0}},
 	{{100, 20, -150}},
+};
+
+T3DVec3 gMainMenuSelectCoords[] = {
+	{{110, 20, -150}},
+	{{-90, 30, -125}},
+	{{70, 20, 25}},
+	{{100, 20, 80}},
+	{{100, 20, 80}},
 };
 
 float gPlayerCursors[4][3];
@@ -115,7 +123,6 @@ sprite_t *gLevelSprites[16];
 T3DModel *gArmyGatorModel;
 rspq_block_t *gArmyGatorBlock;
 T3DModel *gMenuLevelModel;
-rspq_block_t *gMenuModelBlock;
 T3DSkeleton gArmyGatorSkel;
 T3DAnim gArmyGatorAnims;
 
@@ -205,7 +212,7 @@ void bg_render(void) {
 		} else {
 			rdpq_set_mode_fill(RGBA32(96, 180, 224, 255));
 			if (gLevelID == 0) {
-				rdpq_fill_rectangle(12, 12, display_get_width() - 12, display_get_height() - 12);
+				rdpq_fill_rectangle(16, 16, display_get_width() - 16, display_get_height() - 16);
 			} else {
 				rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
 			}
@@ -265,8 +272,6 @@ static inline void t3d_model_bvh(const T3DModel* model, T3DModelDrawConf conf)
 	it.object->isVisible = false;
   }
 
-  debugf("Main menu rendered %d parts\n", balls);
-
   if(state.lastVertFXFunc != T3D_VERTEX_FX_NONE)t3d_state_set_vertex_fx(T3D_VERTEX_FX_NONE, 0, 0);
 }
 
@@ -293,6 +298,7 @@ int main(void) {
     	struct mallinfo mem_info = mallinfo();
 		int ram =  (mem_info.uordblks + (size_t) (((unsigned int) HEAP_START_ADDR - 0x80000000) + 0x10000 + (display_get_width() * display_get_height() * 2)));
 		int tag;
+		int fps = fm_ceilf((display_get_fps()));
 		int updateRate;
 		float updateRateF;
 
@@ -311,7 +317,7 @@ int main(void) {
 		t3d_viewport_attach(&viewport);
 		bg_render();
     	if (gLevelID == 0) {
-			rdpq_set_scissor(12, 12, display_get_width() - 12, display_get_height() - 12);
+			rdpq_set_scissor(16, 16, display_get_width() - 16, display_get_height() - 16);
 		} else {
 			rdpq_set_scissor(0, 0, display_get_width() , display_get_height());
 		}
@@ -331,12 +337,9 @@ int main(void) {
 		data_cache_hit_writeback(&gMapMtx[gfxFlip], sizeof(T3DMat4FP));
 		t3d_matrix_push(&gMapMtx[gfxFlip]);
 		rdpq_set_mode_standard();
-		if (gLevelID == 0) {
-			rdpq_mode_antialias(AA_NONE);
-		} else {
-			rdpq_mode_antialias(AA_STANDARD);
-		}
+		rdpq_mode_antialias(AA_STANDARD);
 		rdpq_mode_filter(FILTER_BILINEAR);
+		rdpq_mode_dithering(DITHER_BAYER_BAYER);
 		rdpq_mode_persp(true);
 		for (int i = 0; i < 16; i++) {
 			if (dplMapBottom[i]) {
@@ -354,21 +357,18 @@ int main(void) {
 			}
 		}
 
+		if (gMenuID != MENU_TITLE) {
+			gCameraPhase = 0.0f;
+		}
 		if (gLevelID == 0 && gArmyGatorBlock) {
 			T3DMat4 mtx;
 			int camID = fm_floorf(gCameraPhase);
-			if (gSubMenu < 4 || gCameraPhase < 1.0f) {
+			if (gSubMenu < 4) {
 				int camID1 = fm_floorf(gCameraPhase) + 1;
 				if (gSubMenu < 4) {
-					gCameraPhase -= 0.03f * updateRateF;
-					if (gCameraPhase < 0.0f) {
-						gCameraPhase = 0.0f;
-					}
+					gCameraPhase = lerpf(gCameraPhase, 0.0f, 0.1f * updateRateF);
 				} else {
-					gCameraPhase += 0.03f * updateRateF;
-					if (gCameraPhase > 1.0f) {
-						gCameraPhase = 1.0f;
-					}
+					gCameraPhase = lerpf(gCameraPhase, 1.0f, 0.1f * updateRateF);
 				}
 				float lp = gCameraPhase;
 				gCameraPos.x = lerpf(gMainMenuCameraPath[camID].x, gMainMenuCameraPath[camID1].x, lp);
@@ -378,14 +378,32 @@ int main(void) {
 				gCameraFocus.y = lerpf(gMainMenuCameraPathFocus[camID].y, gMainMenuCameraPathFocus[camID1].y, lp);
 				gCameraFocus.z = lerpf(gMainMenuCameraPathFocus[camID].z, gMainMenuCameraPathFocus[camID1].z, lp);
 			} else {
-				gCameraPos.x = 25;
-				gCameraPos.y = 40;
-				gCameraPos.z = 75;
-				gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
-				gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
-				gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
+				if (gSubMenu < 6) {
+					gCameraPhase = lerpf(gCameraPhase, 1.0f, 0.1f * updateRateF);
+					gCameraPos.x = lerpf(gCameraPos.x, 25, 0.1f * updateRateF);
+					gCameraPos.y = lerpf(gCameraPos.y, 40, 0.1f * updateRateF);
+					gCameraPos.z = lerpf(gCameraPos.z, 75, 0.1f * updateRateF);
+					gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
+					gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
+					gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
+				} else {
+					if (gCameraPhase <= 1.0f) {
+						gCameraPhase = 1.01f;
+					}
+					gCameraPhase = lerpf(gCameraPhase, 2.0f, 0.1f * updateRateF);
+					float lp = gCameraPhase - 1.0f;
+					int camID = 1;
+					int camID1 = gMenuOption[0] + 2;
+					gCameraPos.x = lerpf(gMainMenuCameraPath[camID].x, gMainMenuCameraPath[camID1].x, lp);
+					gCameraPos.y = lerpf(gMainMenuCameraPath[camID].y, gMainMenuCameraPath[camID1].y, lp);
+					gCameraPos.z = lerpf(gMainMenuCameraPath[camID].z, gMainMenuCameraPath[camID1].z, lp);
+					gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
+					gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
+					gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
+				}
 			}
 			rdpq_mode_zbuf(true, true);
+			t3d_fog_set_enabled(false);
 			t3d_anim_update(&gArmyGatorAnims, updateRateF * 0.02f);
 			t3d_skeleton_update(&gArmyGatorSkel);
 			t3d_mat4_identity(&mtx);
@@ -557,7 +575,7 @@ int main(void) {
 		menu_render(updateRate, updateRateF);
 
     	rdpq_text_printf(NULL, 1, 16, 24, "FPS: %d (%2.1fms)", (int) ceilf(display_get_fps()), (double) (1000.0f / display_get_fps()));
-    	rdpq_text_printf(NULL, 1, 16, 34, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
+    	//rdpq_text_printf(NULL, 1, 16, 34, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
 
 		rdpq_detach_show();
 		ticks += updateRate;

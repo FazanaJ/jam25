@@ -92,7 +92,7 @@ N64_CFLAGS += $(DEF_INC_CFLAGS) \
 	-MMD -MP
 
 MKSPRITE_FLAGS ?=
-MKFONT_FLAGS ?=
+MKFONT_FLAGS ?= --size 16
 
 filesystem/%.bin: $(text_paths)
 	$(eval SRC := $(filter %/$(basename $(notdir $@)).txt,$(text_paths)))

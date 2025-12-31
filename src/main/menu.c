@@ -39,14 +39,15 @@ float gTitleLogoY;
 int gTitleOptionsY;
 int gAttractLevelID;
 int gAttractLevelTimer;
-int gTitleOptionContentY[4];
-float gPlayerSelectScale[4];
-float gTitleOptionScale[4];
+int gTitleOptionContentY[5];
+float gPlayerSelectScale[5];
+float gTitleOptionScale[5];
 char *gTitleStrings[] = {
     "Quick Play",
     "Challenges",
     "Tutorial",
-    "Options"
+    "Options",
+    "Credits"
 };
 char *gOptionsMenuStrings[] = {
     "Screen",
@@ -123,10 +124,25 @@ static void menu_stick_options(int padID, int *optX, int *optY) {
     }
 }
 
+void text_draw_centre(int x, int y, const char *str, color_t colour) {
+    rdpq_fontstyle_t style = {0};
+    rdpq_textparms_t textP = {0};
+    textP.style_id = 1;
+    textP.width = display_get_width();
+    textP.align = ALIGN_CENTER;
+    style.color = RGBA32(0, 0, 0, 255);
+    rdpq_font_style(gFonts[0], 1, &style);
+    rdpq_text_print(&textP, 2, 2 + x, y + 2, str);
+    style.color = colour;
+    rdpq_font_style(gFonts[0], 0, &style);
+    textP.style_id = 0;
+    rdpq_text_print(&textP, 2, x, y, str);
+}
+
 static void menu_render_title(int updateRate, float updateRateF) {
     int shadowOff;
 
-    if (gSubMenu == 0) {
+    if (gSubMenu == TITLE_SUB_INIT) {
         gMenuSprites[0] = sprite_load("rom://logo.ci8.sprite");
         gMenuSprites[1] = sprite_load("rom://menuoptclosed.rgba32.sprite");
         gMenuSprites[2] = sprite_load("rom://menuoptopen.rgba32.sprite");
@@ -134,9 +150,10 @@ static void menu_render_title(int updateRate, float updateRateF) {
         gMenuSprites[6] = sprite_load("rom://menuopt12.ci8.sprite");
         gMenuSprites[7] = sprite_load("rom://menuopt22.ci8.sprite");
         gMenuSprites[8] = sprite_load("rom://menuopt32.ci8.sprite");
-        gMenuSprites[9] = sprite_load("rom://controller.rgba32.sprite");
+        gMenuSprites[9] = sprite_load("rom://menuopt02.ci8.sprite");
+        gMenuSprites[10] = sprite_load("rom://controller.rgba32.sprite");
         gTitleScreenScale = 0.01f;
-        gSubMenu = 1;
+        gSubMenu = TITLE_SUB_LOGO_GROW;
         gTitleScreenVel = 0.0f;
         gMenuFlickerTimer = 0;
         gMenuFlicker = 0;
@@ -148,13 +165,14 @@ static void menu_render_title(int updateRate, float updateRateF) {
         gTitleOptionScale[1] = 0.75f;
         gTitleOptionScale[2] = 0.75f;
         gTitleOptionScale[3] = 0.75f;
+        gTitleOptionScale[4] = 0.75f;
         gPlayerIDs[0] = PLAYER_NONE;
         gPlayerIDs[1] = PLAYER_NONE;
         gPlayerIDs[2] = PLAYER_NONE;
         gPlayerIDs[3] = PLAYER_NONE;
         gGamePaused = true;
         sound_play_global(SOUND_MENU_LOGO);
-    } else if (gSubMenu == 1) {
+    } else if (gSubMenu == TITLE_SUB_LOGO_GROW) {
         gTitleScreenVel += 0.005f * updateRateF;
         if (gTitleScreenVel > 0.1f) {
             gTitleScreenVel = 0.1f;
@@ -162,21 +180,21 @@ static void menu_render_title(int updateRate, float updateRateF) {
         if (gTitleScreenScale < 1.0f) {
             gTitleScreenScale += gTitleScreenVel * updateRateF;
             if (gTitleScreenScale > 1.0f) {
-                gSubMenu = 2;
+                gSubMenu = TITLE_SUB_LOGO_SHRINK;
             }
         }
-    } else if (gSubMenu == 2) {
+    } else if (gSubMenu == TITLE_SUB_LOGO_SHRINK) {
         gTitleScreenVel -= 0.005f * updateRateF;
         gTitleScreenScale += gTitleScreenVel * updateRateF;
         if (gTitleScreenScale < 1.0f) {
             gTitleScreenVel = 0.0f;
             gTitleScreenScale = 1.0f;
             sound_play_global(SOUND_MENU_LOGO_LAND);
-            gSubMenu = 3;
+            gSubMenu = TITLE_SUB_LOGO_IDLE;
         }
     }
 
-    if (gSubMenu == 3) {
+    if (gSubMenu == TITLE_SUB_LOGO_IDLE) {
         gTitleAttractTimer += updateRate;
 
         if (gTitleAttractTimer > 60 * 10) {
@@ -189,7 +207,13 @@ static void menu_render_title(int updateRate, float updateRateF) {
             gGamePaused = false;
             if (gAttractLevelTimer > 60 * 20) {
                 gAttractLevelTimer = 0;
-                gAttractLevelID = (rand() % LEVEL_COUNT) - 1;
+                int prevlev = gAttractLevelID;
+                while (gAttractLevelID != prevlev) {
+                    gAttractLevelID = (rand() % LEVEL_COUNT);
+                }
+                if (gAttractLevelID == 0) {
+                    gAttractLevelID++;
+                }
                 gLevelID = -1;
             }
         } else {
@@ -200,30 +224,32 @@ static void menu_render_title(int updateRate, float updateRateF) {
             if (gGamePaused == false) {
                 game_init(gLevelID, 0);
             }
-                if (gLevelID != 0 && gAttractLevelID != 0) {
-                    game_init(0, gPlayerCount);
-                }
+            if (gLevelID != 0 && gAttractLevelID == 0) {
+                game_init(0, gPlayerCount);
+            }
             gAttractLevelID = 0;
             gGamePaused = true;
             gAttractLevelTimer = 0;
         }
 
         if (gLevelID != 0) {
-            if (gLevelID - 1 < gAttractLevelID) {
+            if (gLevelID < gAttractLevelID) {
                 gMapOffsetX = lerpf(gMapOffsetX, - 1024.0f, 0.125f * updateRateF);
                 if (gMapOffsetX <= -510.0f) {
                     game_init(gAttractLevelID + 1, 0);
                     gMapOffsetX = 512.0f;
                 }
-            } else if (gLevelID - 1 > gAttractLevelID) {
+            } else if (gLevelID > gAttractLevelID) {
                 gMapOffsetX = lerpf(gMapOffsetX, 1024.0f, 0.125f * updateRateF);
                 if (gMapOffsetX >= 510.0f) {
-                    game_init(gAttractLevelID + 1, 0);
+                    game_init(gAttractLevelID, 0);
                     gMapOffsetX = -512.0f;
                 }
             } else {
                 gMapOffsetX = lerpf(gMapOffsetX, 0.0f, 0.125f * updateRateF);
             }
+        } else {
+            gMapOffsetX = 0.0f;
         }
 
         if ((input_pressed(PLAYER_ALL, INPUT_A, 2) || input_pressed(PLAYER_ALL, INPUT_START, 2))) {
@@ -232,7 +258,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
             sound_play_global(SOUND_MENU_ACCEPT);
             if (gTitleScreenScale >= 0.98f) {
                 gTitleScreenScale = 1.0f;
-                gSubMenu = 4;
+                gSubMenu = TITLE_SUB_MOVE_INSIDE;
             }
             gTitleAttractTimer = 0;
         }
@@ -240,7 +266,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
         gTitleAttractTimer = 0;
     }
 
-    if (gSubMenu == 4) {
+    if (gSubMenu == TITLE_SUB_MOVE_INSIDE) {
         int offset = 64 * gScreenMul;
         
         gTitleLogoX = lerpf(gTitleLogoX, display_get_width() / 2, 0.075f * updateRateF);
@@ -249,11 +275,11 @@ static void menu_render_title(int updateRate, float updateRateF) {
         gTitleScreenScale = lerpf(gTitleScreenScale, 0.5f, 0.075f * updateRateF);
 
         if (gTitleScreenScale <= 0.52f) {
-            gSubMenu = 5;
+            gSubMenu = TITLE_SUB_MAIN_MENU;
         }
     }
 
-    if (gSubMenu == 5) {
+    if (gSubMenu == TITLE_SUB_MAIN_MENU) {
         int offset = 64 * gScreenMul;
         gMenuOption[1] = 0;
 
@@ -262,14 +288,14 @@ static void menu_render_title(int updateRate, float updateRateF) {
         if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
             input_clear(PLAYER_ALL, INPUT_B);
             sound_play_global(SOUND_MENU_BACK);
-            gSubMenu = 3;
+            gSubMenu = TITLE_SUB_LOGO_IDLE;
             gTitleAttractTimer = 0;
         }
 
         if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
             input_clear(PLAYER_ALL, INPUT_A);
             sound_play_global(SOUND_MENU_ACCEPT);
-            gSubMenu = 6;
+            gSubMenu = TITLE_SUB_MOVE_OPT;
             gSubMenuOpt = gMenuOption[0] + 1;
         }
 
@@ -278,31 +304,31 @@ static void menu_render_title(int updateRate, float updateRateF) {
 
         if (gMenuOption[0] <= 0) {
             gMenuOption[0] = 0;
-        } else if (gMenuOption[0] >= 4) {
-            gMenuOption[0] = 3;
+        } else if (gMenuOption[0] >= 5) {
+            gMenuOption[0] = 4;
         }
         if (prevOpt != gMenuOption[0]) {
             sound_play_global(SOUND_MENU_MOVE);
         }
     }
 
-    if (gSubMenu == 6) {
+    if (gSubMenu == TITLE_SUB_MOVE_OPT) {
         gTitleOptionsY = lerpf(gTitleOptionsY, 0, 0.1f * updateRateF);
         gTitleLogoY = lerpf(gTitleLogoY, -112, 0.075f * updateRateF);
 
         if (gTitleOptionsY < 1) {
-            gSubMenu = 7 + gMenuOption[0];
+            gSubMenu = TITLE_SUB_QUICK_PLAY + gMenuOption[0];
         }
     }
 
-    if (gSubMenu >= 7 && gSubMenu <= 10) {
+    if (gSubMenu >= TITLE_SUB_QUICK_PLAY && gSubMenu < TITLE_SUB_LEVEL_SELECT) {
         if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
             input_clear(PLAYER_ALL, INPUT_B);
-            if (gSubMenu == 7) {
+            if (gSubMenu == TITLE_SUB_QUICK_PLAY) {
                 if (gPlayerIDs[PLAYER_1] == PLAYER_NONE && gPlayerIDs[PLAYER_2] == PLAYER_NONE && 
                     gPlayerIDs[PLAYER_3] == PLAYER_NONE && gPlayerIDs[PLAYER_4] == PLAYER_NONE) {
                     sound_play_global(SOUND_MENU_BACK);
-                    gSubMenu = 5;
+                    gSubMenu = TITLE_SUB_MAIN_MENU;
                     gTitleAttractTimer = 0;
                 } else {
                     for (int i = 0; i < 4; i++) {
@@ -320,7 +346,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                 }
             } else {
                 sound_play_global(SOUND_MENU_BACK);
-                gSubMenu = 5;
+                gSubMenu = TITLE_SUB_MAIN_MENU;
                 gTitleAttractTimer = 0;
             }
         }
@@ -340,18 +366,20 @@ static void menu_render_title(int updateRate, float updateRateF) {
     rdpq_mode_combiner(RDPQ_COMBINER_TEX_FLAT);
     rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
     rdpq_mode_filter(FILTER_BILINEAR);
-    rdpq_set_prim_color(RGBA32(0, 0, 0, 127));
-    rdpq_sprite_blit(gMenuSprites[0], gTitleLogoX + shadowOff, gTitleLogoY + shadowOff, &params);
-    rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
-    rdpq_sprite_blit(gMenuSprites[0], gTitleLogoX, gTitleLogoY, &params);
+    rdpq_mode_dithering(DITHER_BAYER_BAYER);
+    if (gTitleLogoY > - (90 * gScreenMul)) {
+        rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
+        rdpq_sprite_blit(gMenuSprites[0], gTitleLogoX, gTitleLogoY, &params);
+    }
 
     rdpq_textparms_t textP = {0};
     textP.align = ALIGN_CENTER;
+    textP.width = display_get_width();
 
-    if (gSubMenu == 3) {
+    if (gSubMenu == TITLE_SUB_LOGO_IDLE) {
         if (gMenuFlicker == 0) {
             int tOffsetY = 32 * gScreenMul;
-            rdpq_text_print(&textP, 1, (display_get_width() / 2), display_get_height() - tOffsetY, "PRESS START");
+            text_draw_centre(0, (display_get_height() - tOffsetY) + 2, "PRESS START", RGBA32(255, 255, 255, 255));
         }
     }
     if (gTitleOptionsY < display_get_height() + (36 * gScreenMul)) {
@@ -361,9 +389,9 @@ static void menu_render_title(int updateRate, float updateRateF) {
         params.theta = 0.0f; 
         rdpq_set_mode_standard();
         rdpq_mode_filter(FILTER_BILINEAR);
-        const int gapsize = 64 * gScreenMul;
-        int x = (display_get_width() - (3 * gapsize)) / 2;
-        for (int i = 0; i < 4; i++) {
+        const int gapsize = 48 * gScreenMul;
+        int x = (display_get_width() - (4 * gapsize)) / 2;
+        for (int i = 0; i < 5; i++) {
             int open;
             float s;
             if (gMenuOption[0] == i) {
@@ -374,7 +402,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                 open = false;
             }
 
-            if (gSubMenu >= 6) {
+            if (gSubMenu >= TITLE_SUB_MOVE_OPT) {
                 s *= 0.66f;
             }
 
@@ -413,27 +441,75 @@ static void menu_render_title(int updateRate, float updateRateF) {
 
             x += gapsize;
         }
+        x = (display_get_width() - (4 * gapsize)) / 2;
+        for (int i = 0; i < 5; i++) {
+            int open;
+            float s;
+            if (gMenuOption[0] == i) {
+                s = 1.25f;
+                open = true;
+            } else {
+                s = 0.75f;
+                open = false;
+            }
 
-        
-        rdpq_text_print(&textP, 1, (display_get_width() / 2), gTitleOptionsY + (32 * gScreenMul), gTitleStrings[gMenuOption[0]]);
+            if (gSubMenu >= TITLE_SUB_MOVE_OPT) {
+                s *= 0.66f;
+            }
+
+            s /= gScreenDiv;
+
+            if (gMenuOption[0] == i) {
+                gTitleOptionContentY[i] = lerpf(gTitleOptionContentY[i], 32, 0.2f * updateRateF);
+            } else {
+                gTitleOptionContentY[i] = lerpf(gTitleOptionContentY[i], 0, 0.2f * updateRateF);
+            }
+
+            gTitleOptionScale[i] = lerpf(gTitleOptionScale[i], s, 0.25f); 
+            params.scale_x = gTitleOptionScale[i];
+            params.scale_y = gTitleOptionScale[i];
+            int y = gTitleOptionsY + (fm_sinf((ticks + ((i & 1) * 7600)) / 30.0f) * 4);
+            params.theta = fm_sinf((ticks + (i * 7600)) / 30.0f) * 0.05f;
+            rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+
+            if (gTitleOptionContentY[i] > 12) {
+                rdpq_blitparms_t params2 = {0};
+                params2.cx = 32;
+                params2.cy = 38;
+                params2.scale_x = gTitleOptionScale[i] * ((float) gTitleOptionContentY[i] / 16.0f);
+                params2.scale_y = gTitleOptionScale[i] * ((float) gTitleOptionContentY[i] / 16.0f);
+                params2.theta = fm_sinf((ticks + ((i + 17) * 3600)) / 30.0f) * 0.05f;
+                int offY = (32 - gTitleOptionContentY[i] - ((fm_sinf((ticks + ((i & 1) * 7600)) / 30.0f) * 8))) * gScreenMul;
+                rdpq_sprite_blit(gMenuSprites[5 + i], x, y + offY, &params2);
+            }
+
+            x += gapsize;
+        }
+
+        text_draw_centre(0, gTitleOptionsY + (32 * gScreenMul), gTitleStrings[gMenuOption[0]], RGBA32(255, 255, 255, 255));
     }
     
-    if (gSubMenu <= 3) {
+    if (gSubMenu <= TITLE_SUB_LOGO_IDLE) {
         textP.align = ALIGN_LEFT;
-        rdpq_text_print(&textP, 1, 16, display_get_height() - (16 * gScreenMul), "2026 Fazana");
+        rdpq_text_print(&textP, 1, 20, display_get_height() - (20 * gScreenMul), "2026 Fazana");
     }
 
     if (gSubMenuOpt == 1) {
         int gapSize = 96 * gScreenMul;
         int x = ((display_get_width() -(gapSize)) / 2) * gScreenMul;
-        int y = (108 + gTitleOptionsY) * gScreenMul;
+        int y = (88 + gTitleOptionsY) * gScreenMul;
 
-        if (gSubMenu == 7) {
+        if (gSubMenu == TITLE_SUB_QUICK_PLAY) {
             gTitleOptionsY = lerpf(gTitleOptionsY, 0, 0.1f * updateRateF);
             if (input_pressed(PLAYER_ALL, INPUT_START, 2)) {
                 sound_play_global(SOUND_MENU_ACCEPT);
-                gSubMenu = 11;
+                gSubMenu = TITLE_SUB_LEVEL_SELECT;
             }
+        }
+
+        if (gTitleOptionsY < display_get_height() - (50 * gScreenMul)) {
+            text_draw_centre(0, y - (28 * gScreenMul), "Press A to join", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (128 * gScreenMul), "Press start when ready", RGBA32(255, 255, 255, 255));
         }
 
         for (int i = 0; i < 4; i++) {
@@ -447,7 +523,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                 params2.theta = 0.0f;
             }
             
-            if (gSubMenu == 7) {
+            if (gSubMenu == TITLE_SUB_QUICK_PLAY) {
                 if (input_pressed(i, INPUT_A, 2)) {
                     input_clear(i, INPUT_A);
                     int found = false;
@@ -476,9 +552,13 @@ static void menu_render_title(int updateRate, float updateRateF) {
             params2.scale_x = scale;
             params2.scale_y = scale;
 
-            rdpq_sprite_blit(gMenuSprites[9], x, y, &params2);
-
-            rdpq_text_print(&textP, 1, x - (40 * gScreenMul), y + (32 * gScreenMul), playerStrings[gPlayerIDs[i] + 1]);
+            if (y + (40 * gScreenMul) > 0 && y < display_get_height()) {
+                rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+                rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
+                rdpq_mode_combiner(RDPQ_COMBINER_TEX);
+                rdpq_sprite_blit(gMenuSprites[10], x, y, &params2);
+                text_draw_centre(x - (display_get_width() / 2), y + (32 * gScreenMul), playerStrings[gPlayerIDs[i] + 1], gPlayerColours[i]);
+            }
 
             x += gapSize;
             if (i == 1) {
@@ -487,7 +567,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
             }
         }
     }
-    if (gSubMenu == 11) {
+    if (gSubMenu == TITLE_SUB_LEVEL_SELECT) {
         gTitleOptionsY = lerpf(gTitleOptionsY, -240, 0.1f * updateRateF);
 
         int prevOpt = gMenuOption[3];
@@ -524,7 +604,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
             if (gLevelID != 0) {
                 game_init(0, gPlayerCount);
             }
-            gSubMenu = 7;
+            gSubMenu = TITLE_SUB_QUICK_PLAY;
         } else if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
             input_clear(PLAYER_ALL, INPUT_A);
             gMenuID = MENU_START_COUNTDOWN;

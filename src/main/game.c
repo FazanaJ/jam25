@@ -378,7 +378,6 @@ void level_0_free(void) {
 	t3d_skeleton_destroy(&gArmyGatorSkel);
 	rspq_block_free(gArmyGatorBlock);
 	t3d_model_free(gArmyGatorModel);
-	rspq_block_free(gMenuModelBlock);
 	t3d_model_free(gMenuLevelModel);
 }
 
@@ -408,9 +407,6 @@ void game_init(int levelID, int playerCount) {
 			t3d_model_draw_skinned(gArmyGatorModel, &gArmyGatorSkel);
 			//t3d_model_draw(gArmyGatorModel);
 		gArmyGatorBlock = rspq_block_end();
-		rspq_block_begin();
-			t3d_model_draw(gMenuLevelModel);
-		gMenuModelBlock = rspq_block_end();
 		gClearblack = 3;
         return;
     }

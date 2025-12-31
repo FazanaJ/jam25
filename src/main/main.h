@@ -83,6 +83,7 @@ extern sprite_t *gPauseOptionSprites[5];
 extern sprite_t *gScoreUnderlaySprite;
 extern float gPlayerCursors[4][3];
 extern float gPlayerPointers[4][2];
+extern color_t gPlayerColours[4];
 extern int gPlayerCount;
 extern int gCursorCount;
 extern T3DMat4FP gBaseMtx[4];
@@ -100,6 +101,7 @@ extern T3DVec3 gCameraFocus;
 extern LevelData *gCurrentLevel;
 extern float gMapOffsetX;
 extern int gClearblack;
+extern rdpq_font_t *gFonts[4];
 
 extern LevelData gMapLevel2[];
 extern uint8_t gMapLevelHeights[];
@@ -116,7 +118,6 @@ extern rspq_block_t *gArmyGatorBlock;
 extern T3DSkeleton gArmyGatorSkel;
 extern T3DAnim gArmyGatorAnims;
 extern T3DModel *gMenuLevelModel;
-extern rspq_block_t *gMenuModelBlock;
 
 float lerpf(float a, float b, float f);
 void reset_game_time(void);
