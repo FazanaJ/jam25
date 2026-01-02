@@ -6,6 +6,7 @@
 
 #define TROOP_COUNT 100
 #define LEVEL_COUNT 3
+#define ARROW_TOTAL (12 * 10)
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -102,6 +103,7 @@ extern LevelData *gCurrentLevel;
 extern float gMapOffsetX;
 extern int gClearblack;
 extern rdpq_font_t *gFonts[4];
+extern int gArrowCount;
 
 extern LevelData gMapLevel2[];
 extern uint8_t gMapLevelHeights[];

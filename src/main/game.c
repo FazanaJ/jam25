@@ -152,6 +152,33 @@ int troop_wall_collision(int x, int z, int xT, int zT, int dir) {
 #define _ALIGN8(a) (void *) (((uint32_t) (a) & ~ALIGNCHECK) + MEMALIGN)
 #endif
 
+void heatmap_update(void) {
+	int active = 0;
+	float addX = 0.0f;
+	float addZ = 0.0f;
+	for (int i = 0; i < TROOP_COUNT; i++) {
+		if (gTroops[i].active) {
+			addX += gTroops[i].pos.x;
+			addZ += gTroops[i].pos.z;
+			active++;
+		}
+	}
+
+
+	if (active == 0) {
+		gActiveTroopCount = 0;
+		return;
+	}
+
+	addX /= active;
+	addZ /= active;
+
+	gHeatmap[0] = addX / 32.0f;
+	gHeatmap[1] = addZ / 32.0f;
+
+	gActiveTroopCount = active;
+}
+
 void game_run(int updateRate, float updateRateF) {
     if (gLevelID == 0) {
         return;
@@ -205,12 +232,19 @@ void game_run(int updateRate, float updateRateF) {
 			}
 
 			if (dir != DIR_NONE) {
-				int mapObj = gCurrentLevel->objects[(int)((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0])];
-				if (mapObj < 16 && (mapObj % 8) != 7) {
-					gMapArrows[(int)((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0])].dir = dir;
-					gMapArrows[(int)((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0])].playerID = i + 1;
+				int idx = (int) ((gPlayerCursors[i][2] * 12) + gPlayerCursors[i][0]);
+				int mapObj = gCurrentLevel->objects[idx];
+				if (mapObj == 0) {
+					if (gMapArrows[idx].playerID == 0) {
+						gArrowCount++;
+					}
+					gMapArrows[idx].dir = dir;
+					gMapArrows[idx].playerID = i + 1;
 					gPointerCD[i] = gPointerGlobalTime;
 					sound_play_channel(SOUND_ARROW_1 + i, CHANNEL_ENV1);
+				} else {
+					gPointerCD[i] = gPointerGlobalTime;
+					sound_play_channel(SOUND_MENU_PAUSE, CHANNEL_ENV1);
 				}
 			}
 
@@ -346,6 +380,7 @@ void game_run(int updateRate, float updateRateF) {
 		}
 		nextTroop:
 	}
+	heatmap_update();
 }
 
 void level_free(void) {
@@ -387,6 +422,7 @@ void game_init(int levelID, int playerCount) {
 	rspq_wait();
 	bzero(&gTroops, sizeof(TroopObj) * TROOP_COUNT);
 	bzero(&gMapArrows, sizeof(ArrowData) * 12 * 10);
+	gArrowCount = 0;
 	gPoints[0] = 0;
 	gPoints[1] = 0;
 	gPoints[2] = 0;
@@ -395,6 +431,20 @@ void game_init(int levelID, int playerCount) {
 	gPointsVisual[1] = 0;
 	gPointsVisual[2] = 0;
 	gPointsVisual[3] = 0;
+	gAIPlaced[0] = true;
+	gAIPlaced[1] = true;
+	gAIPlaced[2] = true;
+	gAIPlaced[3] = true;
+	gAIUpdateTimes[0] = rand() % 120;
+	gAIUpdateTimes[1] = rand() % 120;
+	gAIUpdateTimes[2] = rand() % 120;
+	gAIUpdateTimes[3] = rand() % 120;
+	if (gMenuID == MENU_TITLE) {
+		gAIDifficulty[0] = AIDIFF_HARD;
+		gAIDifficulty[1] = AIDIFF_HARD;
+		gAIDifficulty[2] = AIDIFF_HARD;
+		gAIDifficulty[3] = AIDIFF_HARD;
+	}
 	gLevelID = levelID;
     if (levelID == 0) {
 		gMenuLevelModel = t3d_model_load("rom:/mainmenu.t3dm");

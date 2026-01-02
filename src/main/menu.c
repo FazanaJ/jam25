@@ -32,6 +32,7 @@ int gPlayerWinner;
 float gScoreboardOffsetY = 0;
 int gScoreTimerOpacity;
 int gScoreTimerCurOpacity;
+int gPlayerSprites[4];
 
 int gTitleAttractTimer;
 float gTitleLogoX;
@@ -170,6 +171,10 @@ static void menu_render_title(int updateRate, float updateRateF) {
         gPlayerIDs[1] = PLAYER_NONE;
         gPlayerIDs[2] = PLAYER_NONE;
         gPlayerIDs[3] = PLAYER_NONE;
+        gPlayerSprites[0] = PLAYER_NONE;
+        gPlayerSprites[1] = PLAYER_NONE;
+        gPlayerSprites[2] = PLAYER_NONE;
+        gPlayerSprites[3] = PLAYER_NONE;
         gGamePaused = true;
         sound_play_global(SOUND_MENU_LOGO);
     } else if (gSubMenu == TITLE_SUB_LOGO_GROW) {
@@ -200,13 +205,13 @@ static void menu_render_title(int updateRate, float updateRateF) {
         if (gTitleAttractTimer > 60 * 10) {
             int offset = 40 * gScreenMul;
             
-            gTitleLogoX = lerpf(gTitleLogoX, display_get_width() - offset, 0.025f * updateRateF);
+            gTitleLogoX = lerpf(gTitleLogoX, display_get_width() - (offset * 1.5f), 0.025f * updateRateF);
             gTitleLogoY = lerpf(gTitleLogoY, offset, 0.025f * updateRateF);
             gTitleScreenScale = lerpf(gTitleScreenScale, 0.33f, 0.025f * updateRateF);
             gAttractLevelTimer += updateRate;
             gGamePaused = false;
             if (gAttractLevelTimer > 60 * 20) {
-                gAttractLevelTimer = 0;
+                gAttractLevelTimer = -(60 * 10);
                 int prevlev = gAttractLevelID;
                 while (gAttractLevelID != prevlev) {
                     gAttractLevelID = (rand() % LEVEL_COUNT);
@@ -215,6 +220,9 @@ static void menu_render_title(int updateRate, float updateRateF) {
                     gAttractLevelID++;
                 }
                 gLevelID = -1;
+            }
+            if (gAttractLevelID != 0) {
+                text_draw_centre(0, 40 * gScreenMul, "DEMO", RGBA32(255, 255, 255, 255));
             }
         } else {
             gTitleLogoX = lerpf(gTitleLogoX, display_get_width() / 2, 0.075f * updateRateF);
@@ -338,6 +346,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                                 if (gPlayerIDs[j] == port) {
                                     sound_play_global(SOUND_MENU_CONTROLLER_OFF);
                                     gPlayerIDs[j] = PLAYER_NONE;
+                                    gPlayerSprites[j] = PLAYER_NONE;
                                     break;
                                 }
                             }
@@ -538,6 +547,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                         for (int j = 0; j < 4; j++) {
                             if (gPlayerIDs[j] == PLAYER_NONE) {
                                 gPlayerIDs[j] = port;
+                                gPlayerSprites[j] = port;
                                 sound_play_global(SOUND_MENU_CONTROLLER_ON);
                                 break;
                             }
@@ -598,20 +608,24 @@ static void menu_render_title(int updateRate, float updateRateF) {
             gMapOffsetX = lerpf(gMapOffsetX, 0.0f, 0.125f * updateRateF);
         }
 
-        if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
-            input_clear(PLAYER_ALL, INPUT_B);
-            sound_play_global(SOUND_MENU_BACK);
-            if (gLevelID != 0) {
-                game_init(0, gPlayerCount);
+        if (fabsf(gMapOffsetX) < 1.0f) {
+            if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
+                input_clear(PLAYER_ALL, INPUT_B);
+                sound_play_global(SOUND_MENU_BACK);
+                gMapOffsetX = 0.0f;
+                if (gLevelID != 0) {
+                    game_init(0, gPlayerCount);
+                }
+                gSubMenu = TITLE_SUB_QUICK_PLAY;
+            } else if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
+                input_clear(PLAYER_ALL, INPUT_A);
+                gMenuID = MENU_START_COUNTDOWN;
+                gSubMenu = 0;
+                gMapOffsetX = 0.0f;
+                sound_play_global(SOUND_MENU_ACCEPT);
+                gSubMenuOpt = 0;
+                game_init(gMenuOption[3] + 1, 0);
             }
-            gSubMenu = TITLE_SUB_QUICK_PLAY;
-        } else if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
-            input_clear(PLAYER_ALL, INPUT_A);
-            gMenuID = MENU_START_COUNTDOWN;
-            gSubMenu = 0;
-            sound_play_global(SOUND_MENU_ACCEPT);
-            gSubMenuOpt = 0;
-            game_init(gMenuOption[3] + 1, 0);
         }
     }
     if (gSubMenuOpt == 4) {
@@ -648,14 +662,14 @@ static void menu_start_countdown(int updateRate, float updateRateF) {
         sound_play_global(SOUND_VOICE_COUNTDOWN_3);
         int counted[4] = {0};
         for (int i = 0; i < 4; i++) {
-            if (gPlayerIDs[i] != PLAYER_NONE) {
-                counted[gPlayerIDs[i]] = true;
+            if (gPlayerSprites[i] != PLAYER_NONE) {
+                counted[gPlayerSprites[i]] = true;
                 continue;
             }
 
             for (int j = 0; j < 4; j++) {
                 if (counted[j] == false) {
-                    gPlayerIDs[i] = j;
+                    gPlayerSprites[i] = j;
                     counted[j] = true;
                     break;
                 }
@@ -994,7 +1008,7 @@ void hud_render(int updateRate, float updateRateF) {
         b.scale_x = 0.75f / gScreenDiv;
         b.scale_y = 0.75f / gScreenDiv;
         rdpq_set_prim_color(cols[i]);
-        rdpq_sprite_blit(gScoreBoardPlayerSprites[gPlayerIDs[i]], textX, textY, &b);
+        rdpq_sprite_blit(gScoreBoardPlayerSprites[gPlayerSprites[i]], textX, textY, &b);
         number_render(textX + (12 * gScreenMul), textY - (12 * gScreenMul), gPointsVisual[i], 1, 0.75f, 2);
 
         for (int j = 0; j < numLeaders; j++) {

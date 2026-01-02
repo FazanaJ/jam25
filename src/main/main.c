@@ -38,7 +38,9 @@ int gGameTimer;
 int gPlayerIDs[4];
 int gPlayerWins[4];
 int gMenuID;
+int gSmallScreen;
 int gLevelID;
+int gArrowCount;
 int gTimerStage;
 int gGamePaused;
 float gMapOffsetX;
@@ -211,7 +213,12 @@ void bg_render(void) {
 			rdpq_set_mode_standard();
 		} else {
 			rdpq_set_mode_fill(RGBA32(96, 180, 224, 255));
-			if (gLevelID == 0) {
+			if (gLevelID == 0 && sys_bbplayer() == false) {
+				gSmallScreen = true;
+			} else {
+				gSmallScreen = false;
+			}
+			if (gSmallScreen) {
 				rdpq_fill_rectangle(16, 16, display_get_width() - 16, display_get_height() - 16);
 			} else {
 				rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
@@ -316,7 +323,7 @@ int main(void) {
 		t3d_frame_start();
 		t3d_viewport_attach(&viewport);
 		bg_render();
-    	if (gLevelID == 0) {
+    	if (gSmallScreen) {
 			rdpq_set_scissor(16, 16, display_get_width() - 16, display_get_height() - 16);
 		} else {
 			rdpq_set_scissor(0, 0, display_get_width() , display_get_height());
