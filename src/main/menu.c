@@ -37,6 +37,7 @@ int gPlayerSprites[4];
 int gTitleAttractTimer;
 float gTitleLogoX;
 float gTitleLogoY;
+int gAttractTransition;
 int gTitleOptionsY;
 int gAttractLevelID;
 int gAttractLevelTimer;
@@ -175,6 +176,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
         gPlayerSprites[1] = PLAYER_NONE;
         gPlayerSprites[2] = PLAYER_NONE;
         gPlayerSprites[3] = PLAYER_NONE;
+        gAttractTransition = 0;
         gGamePaused = true;
         sound_play_global(SOUND_MENU_LOGO);
     } else if (gSubMenu == TITLE_SUB_LOGO_GROW) {
@@ -210,6 +212,11 @@ static void menu_render_title(int updateRate, float updateRateF) {
             gTitleScreenScale = lerpf(gTitleScreenScale, 0.33f, 0.025f * updateRateF);
             gAttractLevelTimer += updateRate;
             gGamePaused = false;
+            if (gAttractLevelTimer > 30 * 39) {
+                if (gLevelID == 0 && gAttractTransition == 0) {
+                    gAttractTransition = 1;
+                }
+            }
             if (gAttractLevelTimer > 60 * 20) {
                 gAttractLevelTimer = -(60 * 10);
                 int prevlev = gAttractLevelID;
@@ -225,6 +232,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                 text_draw_centre(0, 40 * gScreenMul, "DEMO", RGBA32(255, 255, 255, 255));
             }
         } else {
+            gAttractTransition = 0;
             gTitleLogoX = lerpf(gTitleLogoX, display_get_width() / 2, 0.075f * updateRateF);
             gTitleLogoY = lerpf(gTitleLogoY, display_get_height() / 2, 0.075f * updateRateF);
             gTitleScreenScale = lerpf(gTitleScreenScale, 1.0f, 0.075f * updateRateF);
@@ -260,15 +268,45 @@ static void menu_render_title(int updateRate, float updateRateF) {
             gMapOffsetX = 0.0f;
         }
 
+        if (gAttractTransition != 0) {
+            if (gAttractTransition > 0) {
+                gAttractTransition += updateRate;
+                if (gAttractTransition > 30) {
+                    if (gLevelID != 0) {
+                        gTitleAttractTimer = 0;
+                        game_init(0, 0);
+                    }
+                    gAttractTransition = -30;
+                }
+            } else {
+                gAttractTransition += updateRate;
+                if (gAttractTransition > 0) {
+                    gAttractTransition = 0;
+                }
+            }
+            rdpq_set_mode_standard();
+            rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+            rdpq_mode_combiner(RDPQ_COMBINER_FLAT);
+            int alpha = ((float) ((float) fabs(gAttractTransition) / 30.0f) * 255.0f);
+            rdpq_set_prim_color(RGBA32(0, 0, 0, alpha));
+            rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
+        }
+
         if ((input_pressed(PLAYER_ALL, INPUT_A, 2) || input_pressed(PLAYER_ALL, INPUT_START, 2))) {
             input_clear(PLAYER_ALL, INPUT_A);
             input_clear(PLAYER_ALL, INPUT_START);
-            sound_play_global(SOUND_MENU_ACCEPT);
-            if (gTitleScreenScale >= 0.98f) {
-                gTitleScreenScale = 1.0f;
-                gSubMenu = TITLE_SUB_MOVE_INSIDE;
+            if (gLevelID == 0) {
+                sound_play_global(SOUND_MENU_ACCEPT);
+                if (gTitleScreenScale >= 0.98f) {
+                    gTitleScreenScale = 1.0f;
+                    gTitleAttractTimer = 0;
+                    gSubMenu = TITLE_SUB_MOVE_INSIDE;
+                }
+            } else {
+                if (gAttractTransition == 0) {
+                    gAttractTransition = 1;
+                }
             }
-            gTitleAttractTimer = 0;
         }
     } else {
         gTitleAttractTimer = 0;
@@ -608,7 +646,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
             gMapOffsetX = lerpf(gMapOffsetX, 0.0f, 0.125f * updateRateF);
         }
 
-        if (fabsf(gMapOffsetX) < 1.0f) {
+        if (fabsf(gMapOffsetX) < 4.0f) {
             if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
                 input_clear(PLAYER_ALL, INPUT_B);
                 sound_play_global(SOUND_MENU_BACK);

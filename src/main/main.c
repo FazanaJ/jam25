@@ -71,27 +71,27 @@ color_t gPlayerColours[] = {
 };
 
 T3DVec3 gMainMenuCameraPath[] = {
-	{{150, 100, 300}},
-	{{25, 40, 75}},
+	{{300, 200, 600}},
+	{{50, 80, 150}},
 
-	{{110, 25, -90}},
-	{{-80, 35, -85}},
-	{{60, 35, 65}},
-	{{80, 35, 78}},
-	{{80, 35, 78}},
+	{{220, 50, -180}},
+	{{-160, 70, -170}},
+	{{120, 75, 130}},
+	{{160, 70, 156}},
+	{{160, 70, 156}},
 };
 
 T3DVec3 gMainMenuCameraPathFocus[] = {
-	{{0, 20, 0}},
-	{{100, 20, -150}},
+	{{0, 40, 0}},
+	{{200, 40, -300}},
 };
 
 T3DVec3 gMainMenuSelectCoords[] = {
-	{{110, 20, -150}},
-	{{-90, 30, -125}},
-	{{70, 20, 25}},
-	{{100, 20, 80}},
-	{{100, 20, 80}},
+	{{220, 40, -300}},
+	{{-190, 60, -250}},
+	{{140, 40, 50}},
+	{{200, 40, 160}},
+	{{200, 40, 160}},
 };
 
 float gPlayerCursors[4][3];
@@ -205,6 +205,11 @@ rspq_block_t *gBackgroundBlock;
 void bg_render(void) {
 	if (gLevelID == 0 || fabsf(gMapOffsetX) > 2.0f) {
 		t3d_screen_clear_depth();
+		if (gLevelID == 0 && sys_bbplayer() == false) {
+			gSmallScreen = true;
+		} else {
+			gSmallScreen = false;
+		}
 		if (gClearblack) {
 			rdpq_set_scissor(0, 0, display_get_width() , display_get_height());
 			gClearblack--;
@@ -213,11 +218,6 @@ void bg_render(void) {
 			rdpq_set_mode_standard();
 		} else {
 			rdpq_set_mode_fill(RGBA32(96, 180, 224, 255));
-			if (gLevelID == 0 && sys_bbplayer() == false) {
-				gSmallScreen = true;
-			} else {
-				gSmallScreen = false;
-			}
 			if (gSmallScreen) {
 				rdpq_fill_rectangle(16, 16, display_get_width() - 16, display_get_height() - 16);
 			} else {
@@ -315,7 +315,7 @@ int main(void) {
 		game_run(updateRate, updateRateF);
 		audio_loop(updateRate, updateRateF);
 
-		t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(85.0f), 12.0f, 250.0f);
+		t3d_viewport_set_projection(&viewport, T3D_DEG_TO_RAD(85.0f), 25.0f, 500.0f);
 		t3d_viewport_look_at(&viewport, &gCameraPos, &gCameraFocus, &(T3DVec3){{0,1,0}});
 
 		// ======== Draw (3D) ======== //
@@ -387,9 +387,9 @@ int main(void) {
 			} else {
 				if (gSubMenu < 6) {
 					gCameraPhase = lerpf(gCameraPhase, 1.0f, 0.1f * updateRateF);
-					gCameraPos.x = lerpf(gCameraPos.x, 25, 0.1f * updateRateF);
-					gCameraPos.y = lerpf(gCameraPos.y, 40, 0.1f * updateRateF);
-					gCameraPos.z = lerpf(gCameraPos.z, 75, 0.1f * updateRateF);
+					gCameraPos.x = lerpf(gCameraPos.x, 50, 0.1f * updateRateF);
+					gCameraPos.y = lerpf(gCameraPos.y, 80, 0.1f * updateRateF);
+					gCameraPos.z = lerpf(gCameraPos.z, 150, 0.1f * updateRateF);
 					gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
 					gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
 					gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
@@ -417,7 +417,6 @@ int main(void) {
 			T3DVec3 angle = {{0, 1, 0}};
 			t3d_mat4_rotate(&mtx, &angle, 1 * M_PI_2);
 			t3d_mat4_translate(&mtx, 25, 0.0f, -50.0f);
-			t3d_mat4_scale(&mtx, 0.5f, 0.5f, 0.5f);
 			t3d_mat4_to_fixed(&gBaseMtx[gfxFlip], &mtx);
 			data_cache_hit_writeback(&gBaseMtx[gfxFlip], sizeof(T3DMat4FP));
     		t3d_skeleton_use(&gArmyGatorSkel);
