@@ -141,19 +141,26 @@ void text_draw_centre(int x, int y, const char *str, color_t colour) {
     rdpq_text_print(&textP, 2, x, y, str);
 }
 
+void titlescreen_load_assets(void) {
+    gMenuSprites[0] = sprite_load("rom://logo.ci8.sprite");
+    gMenuSprites[1] = sprite_load("rom://menuoptclosed.rgba32.sprite");
+    gMenuSprites[2] = sprite_load("rom://menuoptopen.rgba32.sprite");
+    gMenuSprites[5] = sprite_load("rom://menuopt02.ci8.sprite");
+    gMenuSprites[6] = sprite_load("rom://menuopt12.ci8.sprite");
+    gMenuSprites[7] = sprite_load("rom://menuopt22.ci8.sprite");
+    gMenuSprites[8] = sprite_load("rom://menuopt32.ci8.sprite");
+    gMenuSprites[9] = sprite_load("rom://menuopt02.ci8.sprite");
+    gMenuSprites[10] = sprite_load("rom://controller.rgba32.sprite");
+    gGamePaused = true;
+}
+
 static void menu_render_title(int updateRate, float updateRateF) {
     int shadowOff;
 
+    if (gMenuSprites[0] == NULL) {
+        titlescreen_load_assets();
+    }
     if (gSubMenu == TITLE_SUB_INIT) {
-        gMenuSprites[0] = sprite_load("rom://logo.ci8.sprite");
-        gMenuSprites[1] = sprite_load("rom://menuoptclosed.rgba32.sprite");
-        gMenuSprites[2] = sprite_load("rom://menuoptopen.rgba32.sprite");
-        gMenuSprites[5] = sprite_load("rom://menuopt02.ci8.sprite");
-        gMenuSprites[6] = sprite_load("rom://menuopt12.ci8.sprite");
-        gMenuSprites[7] = sprite_load("rom://menuopt22.ci8.sprite");
-        gMenuSprites[8] = sprite_load("rom://menuopt32.ci8.sprite");
-        gMenuSprites[9] = sprite_load("rom://menuopt02.ci8.sprite");
-        gMenuSprites[10] = sprite_load("rom://controller.rgba32.sprite");
         gTitleScreenScale = 0.01f;
         gSubMenu = TITLE_SUB_LOGO_GROW;
         gTitleScreenVel = 0.0f;
@@ -694,6 +701,14 @@ static void menu_start_countdown(int updateRate, float updateRateF) {
         gTitleOptionContentY[1] = 0;
         gTitleOptionContentY[2] = 0;
         gTitleOptionContentY[3] = 0;
+		gPoints[0] = 0;
+		gPoints[1] = 0;
+		gPoints[2] = 0;
+		gPoints[3] = 0;
+		gPointsVisual[0] = 0;
+		gPointsVisual[1] = 0;
+		gPointsVisual[2] = 0;
+		gPointsVisual[3] = 0;
         gMenuOption[0] = 40;
         gSubMenuOpt = 40;
         gPauseSub = 0;
@@ -1187,6 +1202,7 @@ void menu_game_finish(int updateRate, float updateRateF) {
         gTitleOptionScale[0] = 0.0f;
         gSubMenuOpt = 0;
         gPlayerWinner = -1;
+        gMenuOption[1] = 0;
     } else if (gSubMenu == 1) {
         gTitleOptionScale[0] = lerpf(gTitleOptionScale[0], 1.0f, 0.2f * updateRateF);
 
@@ -1211,7 +1227,9 @@ void menu_game_finish(int updateRate, float updateRateF) {
                 int alpha = ((float) ((float) gSubMenuOpt / 120.0f) * 255.0f);
 
                 rdpq_set_prim_color(RGBA32(0, 0, 0, alpha));
-                rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
+                if (alpha != 0) {
+                    rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
+                }
 
                 if (alpha == 255) {
                     gSubMenu = 2;
@@ -1230,7 +1248,9 @@ void menu_game_finish(int updateRate, float updateRateF) {
         }
         int alpha = ((float) ((float) gSubMenuOpt / 120.0f) * 255.0f);
         rdpq_set_prim_color(RGBA32(0, 0, 0, alpha));
-        rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
+        if (alpha != 0) {
+            rdpq_fill_rectangle(0, 0, display_get_width(), display_get_height());
+        }
 
         if (alpha == 0 && gTitleAttractTimer == 0) {
             gTitleAttractTimer = 1;
@@ -1277,38 +1297,44 @@ void menu_game_finish(int updateRate, float updateRateF) {
 
             int alpha = ((float) gTitleAttractTimer / 30.0f) * 255;
 
-            rdpq_set_prim_color(RGBA32(255, 255, 255, alpha));
-            if (gPlayerWinner == -1) {
-                rdpq_text_print(NULL, 1, display_get_width() / 2, 100, "its a tie..");
-            } else {
-                rdpq_text_printf(NULL, 1, display_get_width() / 2, 100, "Player %d has winned!!", gPlayerWinner + 1);
-            }
-
             if (gTitleAttractTimer == 30) {
                 if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
                     input_clear(PLAYER_ALL, INPUT_A);
+                    sound_play_global(SOUND_MENU_CHALKBACK);
                     gSubMenu = 3;
                 }
             }
         }
     } else if (gSubMenu == 3) {
-        rdpq_text_printf(NULL, 1, display_get_width() / 2, 100, "this is temp as hell becauase i plan on something scene");
-        rdpq_text_printf(NULL, 1, display_get_width() / 2, 100, "press A to play again, press B to select a new map, press Z to quit to menu.");
+        int prevOpt = gMenuOption[1];
+        menu_stick_options(PLAYER_ALL, NULL, &gMenuOption[1]);
+        if (gMenuOption[1] < 0) {
+            gMenuOption[1] = 0;
+        } else if (gMenuOption[1] > 1) {
+            gMenuOption[1] = 1;
+        }
+        if (prevOpt != gMenuOption[1]) {
+            sound_play_global(SOUND_MENU_CHALKSELECT);
+        }
         if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
             input_clear(PLAYER_ALL, INPUT_A);
-            game_init(gLevelID, gPlayerCount);
-            gMenuID = MENU_START_COUNTDOWN;
-            gSubMenu = 0;
+            if (gMenuOption[0] == 0) {
+                gMenuID = MENU_TITLE;
+                gSubMenu = TITLE_SUB_LEVEL_SELECT;
+            } else {
+                gMenuID = MENU_TITLE;
+                for (int i = 0; i < 4; i++) {
+                    gPlayerWins[i] = 0;
+                }
+                game_init(0, 0);
+                gSubMenu = 0;
+            }
+            return;
         }
         if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
             input_clear(PLAYER_ALL, INPUT_B);
-            gMenuID = MENU_TITLE;
-            gSubMenu = 11;
-        }
-        if (input_pressed(PLAYER_ALL, INPUT_B, 2)) {
-            input_clear(PLAYER_ALL, INPUT_B);
-            gMenuID = MENU_TITLE;
-            gSubMenu = 0;
+            sound_play_global(SOUND_MENU_CHALKSELECT);
+            gSubMenu = 2;
         }
     }
 }

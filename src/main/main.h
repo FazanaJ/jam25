@@ -118,8 +118,9 @@ extern rspq_block_t *dplMapBottom[16];
 extern T3DModel *gArmyGatorModel;
 extern rspq_block_t *gArmyGatorBlock;
 extern T3DSkeleton gArmyGatorSkel;
-extern T3DAnim gArmyGatorAnims;
+extern T3DAnim gArmyGatorAnims[4];
 extern T3DModel *gMenuLevelModel;
+extern int gArmyGatorAnimID;
 
 float lerpf(float a, float b, float f);
 void reset_game_time(void);

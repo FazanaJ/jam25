@@ -29,4 +29,7 @@ enum TitleSubmenus {
     TITLE_SUB_LEVEL_SELECT,
 };
 
+extern int gPlayerWinner;
+extern int gNumTies;
+
 void menu_render(int updateRate, float updateRateF);

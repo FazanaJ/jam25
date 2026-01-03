@@ -409,7 +409,10 @@ void level_free(void) {
 }
 
 void level_0_free(void) {
-	t3d_anim_destroy(&gArmyGatorAnims);
+	t3d_anim_destroy(&gArmyGatorAnims[0]);
+	t3d_anim_destroy(&gArmyGatorAnims[1]);
+	t3d_anim_destroy(&gArmyGatorAnims[2]);
+	t3d_anim_destroy(&gArmyGatorAnims[3]);
 	t3d_skeleton_destroy(&gArmyGatorSkel);
 	rspq_block_free(gArmyGatorBlock);
 	t3d_model_free(gArmyGatorModel);
@@ -423,14 +426,6 @@ void game_init(int levelID, int playerCount) {
 	bzero(&gTroops, sizeof(TroopObj) * TROOP_COUNT);
 	bzero(&gMapArrows, sizeof(ArrowData) * 12 * 10);
 	gArrowCount = 0;
-	gPoints[0] = 0;
-	gPoints[1] = 0;
-	gPoints[2] = 0;
-	gPoints[3] = 0;
-	gPointsVisual[0] = 0;
-	gPointsVisual[1] = 0;
-	gPointsVisual[2] = 0;
-	gPointsVisual[3] = 0;
 	gAIPlaced[0] = true;
 	gAIPlaced[1] = true;
 	gAIPlaced[2] = true;
@@ -445,14 +440,23 @@ void game_init(int levelID, int playerCount) {
 		gAIDifficulty[2] = AIDIFF_HARD;
 		gAIDifficulty[3] = AIDIFF_HARD;
 	}
+	if (gArmyGatorBlock) {
+		rspq_call_deferred((void *) level_0_free, NULL);
+		rspq_wait();
+		gArmyGatorBlock = NULL;
+	}
+	gArmyGatorAnimID = -1;
 	gLevelID = levelID;
     if (levelID == 0) {
 		gMenuLevelModel = t3d_model_load("rom:/mainmenu.t3dm");
 		gArmyGatorModel = t3d_model_load("rom:/armygator_lp.t3dm");
 		gArmyGatorSkel = t3d_skeleton_create_buffered(gArmyGatorModel, 2);
-  		gArmyGatorAnims = t3d_anim_create(gArmyGatorModel, "sittingidle");
+		gArmyGatorAnimID = 1;
+  		gArmyGatorAnims[0] = t3d_anim_create(gArmyGatorModel, "sittingidle");
+  		gArmyGatorAnims[1] = t3d_anim_create(gArmyGatorModel, "Yappin");
+		t3d_anim_attach(&gArmyGatorAnims[0], &gArmyGatorSkel);
+		t3d_anim_attach(&gArmyGatorAnims[1], &gArmyGatorSkel);
 		data_cache_writeback_invalidate_all();
-		t3d_anim_attach(&gArmyGatorAnims, &gArmyGatorSkel);
 		rspq_block_begin();
 			t3d_model_draw_skinned(gArmyGatorModel, &gArmyGatorSkel);
 			//t3d_model_draw(gArmyGatorModel);
@@ -460,12 +464,6 @@ void game_init(int levelID, int playerCount) {
 		gClearblack = 3;
         return;
     }
-
-	if (gArmyGatorBlock) {
-		rspq_call_deferred((void *) level_0_free, NULL);
-		rspq_wait();
-		gArmyGatorBlock = NULL;
-	}
 
 	gCameraFocus.v[0] = 0 + 192;
 	gCameraFocus.v[1] = 0;

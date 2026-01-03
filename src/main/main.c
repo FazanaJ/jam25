@@ -46,6 +46,7 @@ int gGamePaused;
 float gMapOffsetX;
 T3DVec3 gCameraPos;
 T3DVec3 gCameraFocus;
+T3DVec3 gArmyGatorPos;
 float gCameraPhase = 0;
 int gClearblack;
 rdpq_font_t *gFonts[4];
@@ -126,7 +127,8 @@ T3DModel *gArmyGatorModel;
 rspq_block_t *gArmyGatorBlock;
 T3DModel *gMenuLevelModel;
 T3DSkeleton gArmyGatorSkel;
-T3DAnim gArmyGatorAnims;
+T3DAnim gArmyGatorAnims[4];
+int gArmyGatorAnimID = -1;
 
 LevelData *gCurrentLevel;
 
@@ -188,6 +190,222 @@ static inline void update_game_time(int *updateRate, float *updateRateF) {
         *updateRateF = sPrevDeltaF;
         *updateRate = sPrevDelta;
     }
+}
+
+sprite_t *gFinishSprites[17];
+T3DVertPacked *gFinishVerts;
+T3DMat4FP gFinishMtx[32];
+int gNumbersRendered;
+
+void finish_render_verts(float x, float y, float z, int mtxID, float scaleX, float scaleY) {
+	T3DMat4 mtx;
+	t3d_mat4_identity(&mtx);
+	t3d_mat4_translate(&mtx, x, y, z);
+	t3d_mat4_scale(&mtx, scaleX, scaleY, 1.0f);
+	t3d_mat4_to_fixed(&gFinishMtx[mtxID], &mtx);
+	data_cache_hit_writeback(&gFinishMtx[mtxID], sizeof(T3DMat4FP));
+	t3d_matrix_push(&gFinishMtx[mtxID]);
+	t3d_vert_load(&gFinishVerts[0], 0, 4);
+	t3d_tri_draw(0, 1, 2);
+	t3d_tri_draw(2, 3, 0);
+	t3d_matrix_pop(1);
+	rdpq_sync_pipe();
+}
+
+void finish_score_render(float x, float y, int number, int zeros, float scale, int yOffset) {
+    int num;
+    int digit;
+    int total;
+    int divCount;
+    int offset;
+    int tX;
+    int width;
+    int tY;
+    surface_t tex;
+
+    total = 1;
+    num = number;
+    while (true) {
+        if (number >= 10) {
+            total++;
+            number /= 10;
+        } else {
+            break;
+        }
+    }
+
+    if (total < zeros) {
+        total = zeros;
+    }
+
+
+    yOffset *= gScreenMul;
+    offset = (48 / gScreenDiv) * scale;
+    width = (40 / gScreenDiv) * scale;
+    divCount = 1;
+    tX = x + (total * width) - width;
+    tY = y + (total * yOffset) - yOffset;
+    rdpq_texparms_t p = {0};
+    if (gScreenMul == 1) {
+        p.s.scale_log = -1;
+        p.t.scale_log = -1;
+    }
+    p.s.mirror = MIRROR_NONE;
+    p.t.mirror = MIRROR_NONE;
+    p.s.repeats = 0;
+    p.t.repeats = 0;
+    for (int i = 0; i < total; i++) {
+        digit = (int) (((float) num / (float) divCount)) % 10;
+        tex = sprite_get_pixels(gNumberSprites);
+        surface_t t = surface_make_sub(&tex, 0, 48 * digit, 48, 48);
+        
+        rdpq_tex_upload(TILE0, &t, &p);
+		finish_render_verts(tX, tY, -250.0f, 12 + gNumbersRendered, scale, scale);
+		gNumbersRendered++;
+        rdpq_sync_pipe();
+        tX -= width;
+        tY -= yOffset;
+        divCount *= 10;
+    }
+}
+
+void render_finish(int updateRate, float updateRateF) {
+	if (gFinishVerts == NULL) {
+		gFinishVerts = malloc_uncached_aligned(0x10, sizeof(T3DVertPacked) * 4);
+		gFinishVerts[0] = (T3DVertPacked){
+			.posA = {-16, -16, 0}, .stA = {0, 1024},
+			.posB = {16, -16, 0}, .stB = {1024, 1024},
+		};
+		gFinishVerts[1] = (T3DVertPacked){
+			.posA = {16, 16, 0}, .stA = {1024, 0},
+			.posB = {-16, 16, 0}, .stB = {0, 0},
+		};
+		gFinishSprites[0] = sprite_load("rom://resultstitle.i4.sprite");
+		gFinishSprites[1] = sprite_load("rom://chalkp1.i4.sprite");
+		gFinishSprites[2] = sprite_load("rom://chalkp2.i4.sprite");
+		gFinishSprites[3] = sprite_load("rom://chalkp3.i4.sprite");
+		gFinishSprites[4] = sprite_load("rom://chalkp4.i4.sprite");
+		gFinishSprites[5] = sprite_load("rom://numbers.i4.sprite");
+		gFinishSprites[6] = sprite_load("rom://resultssubtitle.i4.sprite");
+		gFinishSprites[7] = sprite_load("rom://finishwinnerunderlay.i4.sprite");
+		gFinishSprites[8] = sprite_load("rom://finishp1.i4.sprite");
+		gFinishSprites[9] = sprite_load("rom://finishp2.i4.sprite");
+		gFinishSprites[10] = sprite_load("rom://finishp3.i4.sprite");
+		gFinishSprites[11] = sprite_load("rom://finishp4.i4.sprite");
+		gFinishSprites[12] = sprite_load("rom://finishtie1.i4.sprite");
+		gFinishSprites[13] = sprite_load("rom://finishtie2.i4.sprite");
+		gFinishSprites[14] = sprite_load("rom://finishopt1.i4.sprite");
+		gFinishSprites[15] = sprite_load("rom://finishopt2.i4.sprite");
+		gFinishSprites[16] = sprite_load("rom://finishselect.i4.sprite");
+	}
+	rdpq_sync_pipe();
+	rdpq_set_mode_standard();
+	rdpq_mode_antialias(AA_STANDARD);
+	rdpq_mode_filter(FILTER_BILINEAR);
+	rdpq_mode_dithering(DITHER_BAYER_BAYER);
+	rdpq_mode_combiner(RDPQ_COMBINER_TEX_FLAT);
+	rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+	t3d_state_set_drawflags(T3D_FLAG_NO_LIGHT | T3D_FLAG_TEXTURED);
+	rdpq_mode_persp(true);
+	rdpq_texparms_t p = {0};
+	float x;
+
+	gNumbersRendered = 0;
+	p.s.scale_log = -2;
+	if (gSubMenu < 3) {
+		rdpq_sprite_upload(TILE0, gFinishSprites[0], &p);
+		finish_render_verts(-185.0f, 98.0f, -250.0f, 0, 1.5f, 0.66f);
+	} else {
+		rdpq_sprite_upload(TILE0, gFinishSprites[6], &p);
+		finish_render_verts(-185.0f, 98.0f, -250.0f, 0, 1.25f, 0.5f);
+	}
+	p.s.scale_log = -1;
+	p.t.scale_log = -1;
+	if (gSubMenu == 2) {
+		if (gPlayerWinner != -1) {
+			float scale = 1.0f + (fm_cosf((float) ticks / 25.0f) * 0.1f);
+			gPlayerColours[gPlayerWinner].r /= 2;
+			gPlayerColours[gPlayerWinner].g /= 2;
+			gPlayerColours[gPlayerWinner].b /= 2;
+			gPlayerColours[gPlayerWinner].a = 144;
+			rdpq_set_prim_color(gPlayerColours[gPlayerWinner]);
+			rdpq_sprite_upload(TILE0, gFinishSprites[7], &p);
+			gPlayerColours[gPlayerWinner].r *= 2;
+			gPlayerColours[gPlayerWinner].g *= 2;
+			gPlayerColours[gPlayerWinner].b *= 2;
+			gPlayerColours[gPlayerWinner].a = 255;
+			finish_render_verts(-225.0f + (25.0f * gPlayerWinner), 80.0f, -250.0f, 10, scale, scale);
+		}
+	}
+	if (gSubMenu < 3) {
+		rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
+		p.s.scale_log = -2;
+		if (gPlayerWinner == -1) {
+			rdpq_sprite_upload(TILE0, gFinishSprites[12 + gNumTies], &p);
+			finish_render_verts(-190.0f, 47.0f, -250.0f, 7, 1.25f, 0.75f);
+		} else {
+			rdpq_sprite_upload(TILE0, gFinishSprites[8 + gPlayerWinner], &p);
+			finish_render_verts(-190.0f, 47.0f, -250.0f, 7, 1.25f, 0.75f);
+		}
+		p.s.scale_log = -1;
+		x = -225.0f;
+		for (int i = 0; i < 4; i++) {
+			rdpq_set_prim_color(gPlayerColours[i]);
+			rdpq_sprite_upload(TILE0, gFinishSprites[1 + i], &p);
+			finish_render_verts(x, 80.0f, -250.0f, 1 + i, 0.60f, 0.60f);
+			rdpq_set_prim_color(RGBA32(255, 255, 255, 192));
+			finish_score_render(x - 7.0f, 65.0f, gPoints[i], 1, 0.35f, 0);
+
+			x += 25.0f;
+		}
+	} else {
+		if (gPlayerWinner != -1) {
+			float scale = 1.0f + (fm_cosf((float) ticks / 25.0f) * 0.1f);
+			gPlayerColours[gPlayerWinner].r /= 2;
+			gPlayerColours[gPlayerWinner].g /= 2;
+			gPlayerColours[gPlayerWinner].b /= 2;
+			gPlayerColours[gPlayerWinner].a = 144;
+			rdpq_set_prim_color(gPlayerColours[gPlayerWinner]);
+			rdpq_sprite_upload(TILE0, gFinishSprites[7], &p);
+			gPlayerColours[gPlayerWinner].r *= 2;
+			gPlayerColours[gPlayerWinner].g *= 2;
+			gPlayerColours[gPlayerWinner].b *= 2;
+			gPlayerColours[gPlayerWinner].a = 255;
+			finish_render_verts(-225.0f + (25.0f * gPlayerWinner), 80.0f, -250.0f, 10, scale, scale);
+		}
+		x = -225.0f;
+		for (int i = 0; i < 4; i++) {
+			rdpq_set_prim_color(gPlayerColours[i]);
+			rdpq_sprite_upload(TILE0, gFinishSprites[1 + i], &p);
+			finish_render_verts(x, 80.0f, -250.0f, 1 + i, 0.60f, 0.60f);
+			rdpq_set_prim_color(RGBA32(255, 255, 255, 144));
+			finish_score_render(x - 7.0f, 65.0f, gPlayerWins[i], 1, 0.35f, 0);
+			x += 25.0f;
+		}
+		rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
+		float y = 52.0f;
+		p.s.scale_log = -2;
+		for (int i = 0; i < 2; i++) {
+			if (gMenuOption[1] == i) {
+				p.s.scale_log = -1;
+				rdpq_sprite_upload(TILE0, gFinishSprites[16], &p);
+				rdpq_set_prim_color(RGBA32(255, 255, 255, 192));
+				finish_render_verts(-185.0f, y, -250.0f, 11, 1.75f, 0.66f);
+				rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
+				p.s.scale_log = -2;
+			}
+
+			surface_t tex = sprite_get_pixels(gFinishSprites[14 + i]);
+			surface_t t = surface_make_sub(&tex, 0, 0, 128, 64);
+			rdpq_tex_upload(TILE0, &t, &p);
+			finish_render_verts(-200, y, -250.0f, 6 + i, 0.75f, 0.60f);
+			t = surface_make_sub(&tex, 128, 0, 128, 64);
+			
+			rdpq_tex_upload(TILE0, &t, &p);
+			finish_render_verts(-200 + (32 * 0.75f), y, -250.0f, 8 + i, 0.75f, 0.60f);
+			y -= 15.0f;
+		}
+	}
 }
 
 void reset_game_time(void) {
@@ -308,6 +526,7 @@ int main(void) {
 		int fps = fm_ceilf((display_get_fps()));
 		int updateRate;
 		float updateRateF;
+		int prevAnim = gArmyGatorAnimID;
 
 		update_game_time(&updateRate, &updateRateF);
 
@@ -369,54 +588,69 @@ int main(void) {
 		}
 		if (gLevelID == 0 && gArmyGatorBlock) {
 			T3DMat4 mtx;
-			int camID = fm_floorf(gCameraPhase);
-			if (gSubMenu < 4) {
-				int camID1 = fm_floorf(gCameraPhase) + 1;
+			if (gMenuID != MENU_FINISH) {
+				gArmyGatorPos.x = 25.0f;
+				gArmyGatorPos.y = 0.0f;
+				gArmyGatorPos.z = -50.0f;
+				int camID = fm_floorf(gCameraPhase);
 				if (gSubMenu < 4) {
-					gCameraPhase = lerpf(gCameraPhase, 0.0f, 0.1f * updateRateF);
-				} else {
-					gCameraPhase = lerpf(gCameraPhase, 1.0f, 0.1f * updateRateF);
-				}
-				float lp = gCameraPhase;
-				gCameraPos.x = lerpf(gMainMenuCameraPath[camID].x, gMainMenuCameraPath[camID1].x, lp);
-				gCameraPos.y = lerpf(gMainMenuCameraPath[camID].y, gMainMenuCameraPath[camID1].y, lp);
-				gCameraPos.z = lerpf(gMainMenuCameraPath[camID].z, gMainMenuCameraPath[camID1].z, lp);
-				gCameraFocus.x = lerpf(gMainMenuCameraPathFocus[camID].x, gMainMenuCameraPathFocus[camID1].x, lp);
-				gCameraFocus.y = lerpf(gMainMenuCameraPathFocus[camID].y, gMainMenuCameraPathFocus[camID1].y, lp);
-				gCameraFocus.z = lerpf(gMainMenuCameraPathFocus[camID].z, gMainMenuCameraPathFocus[camID1].z, lp);
-			} else {
-				if (gSubMenu < 6) {
-					gCameraPhase = lerpf(gCameraPhase, 1.0f, 0.1f * updateRateF);
-					gCameraPos.x = lerpf(gCameraPos.x, 50, 0.1f * updateRateF);
-					gCameraPos.y = lerpf(gCameraPos.y, 80, 0.1f * updateRateF);
-					gCameraPos.z = lerpf(gCameraPos.z, 150, 0.1f * updateRateF);
-					gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
-					gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
-					gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
-				} else {
-					if (gCameraPhase <= 1.0f) {
-						gCameraPhase = 1.01f;
+					int camID1 = fm_floorf(gCameraPhase) + 1;
+					if (gSubMenu < 4) {
+						gCameraPhase = lerpf(gCameraPhase, 0.0f, 0.1f * updateRateF);
+					} else {
+						gCameraPhase = lerpf(gCameraPhase, 1.0f, 0.1f * updateRateF);
 					}
-					gCameraPhase = lerpf(gCameraPhase, 2.0f, 0.1f * updateRateF);
-					float lp = gCameraPhase - 1.0f;
-					int camID = 1;
-					int camID1 = gMenuOption[0] + 2;
+					float lp = gCameraPhase;
 					gCameraPos.x = lerpf(gMainMenuCameraPath[camID].x, gMainMenuCameraPath[camID1].x, lp);
 					gCameraPos.y = lerpf(gMainMenuCameraPath[camID].y, gMainMenuCameraPath[camID1].y, lp);
 					gCameraPos.z = lerpf(gMainMenuCameraPath[camID].z, gMainMenuCameraPath[camID1].z, lp);
-					gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
-					gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
-					gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
+					gCameraFocus.x = lerpf(gMainMenuCameraPathFocus[camID].x, gMainMenuCameraPathFocus[camID1].x, lp);
+					gCameraFocus.y = lerpf(gMainMenuCameraPathFocus[camID].y, gMainMenuCameraPathFocus[camID1].y, lp);
+					gCameraFocus.z = lerpf(gMainMenuCameraPathFocus[camID].z, gMainMenuCameraPathFocus[camID1].z, lp);
+				} else {
+					if (gSubMenu < 6) {
+						gCameraPhase = lerpf(gCameraPhase, 1.0f, 0.1f * updateRateF);
+						gCameraPos.x = lerpf(gCameraPos.x, 50, 0.1f * updateRateF);
+						gCameraPos.y = lerpf(gCameraPos.y, 80, 0.1f * updateRateF);
+						gCameraPos.z = lerpf(gCameraPos.z, 150, 0.1f * updateRateF);
+						gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
+						gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
+						gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
+					} else {
+						if (gCameraPhase <= 1.0f) {
+							gCameraPhase = 1.01f;
+						}
+						gCameraPhase = lerpf(gCameraPhase, 2.0f, 0.1f * updateRateF);
+						float lp = gCameraPhase - 1.0f;
+						int camID = 1;
+						int camID1 = gMenuOption[0] + 2;
+						gCameraPos.x = lerpf(gMainMenuCameraPath[camID].x, gMainMenuCameraPath[camID1].x, lp);
+						gCameraPos.y = lerpf(gMainMenuCameraPath[camID].y, gMainMenuCameraPath[camID1].y, lp);
+						gCameraPos.z = lerpf(gMainMenuCameraPath[camID].z, gMainMenuCameraPath[camID1].z, lp);
+						gCameraFocus.x = lerpf(gCameraFocus.x, gMainMenuSelectCoords[gMenuOption[0]].x, 0.1f * updateRateF);
+						gCameraFocus.y = lerpf(gCameraFocus.y, gMainMenuSelectCoords[gMenuOption[0]].y, 0.1f * updateRateF);
+						gCameraFocus.z = lerpf(gCameraFocus.z, gMainMenuSelectCoords[gMenuOption[0]].z, 0.1f * updateRateF);
+					}
 				}
+			} else {
+				gArmyGatorPos.x = -120.0f;
+				gArmyGatorPos.y = 0.0f;
+				gArmyGatorPos.z = -215.0f;
+				gCameraPos.x = -200;
+				gCameraPos.y = 70;
+				gCameraPos.z = -170;
+				gCameraFocus.x = -170;
+				gCameraFocus.y = 60;
+				gCameraFocus.z = -250;
 			}
 			rdpq_mode_zbuf(true, true);
 			t3d_fog_set_enabled(false);
-			t3d_anim_update(&gArmyGatorAnims, updateRateF * 0.02f);
+			t3d_anim_update(&gArmyGatorAnims[gArmyGatorAnimID], updateRateF * 0.02f);
 			t3d_skeleton_update(&gArmyGatorSkel);
 			t3d_mat4_identity(&mtx);
 			T3DVec3 angle = {{0, 1, 0}};
 			t3d_mat4_rotate(&mtx, &angle, 1 * M_PI_2);
-			t3d_mat4_translate(&mtx, 25, 0.0f, -50.0f);
+			t3d_mat4_translate(&mtx, gArmyGatorPos.x, gArmyGatorPos.y, gArmyGatorPos.z);
 			t3d_mat4_to_fixed(&gBaseMtx[gfxFlip], &mtx);
 			data_cache_hit_writeback(&gBaseMtx[gfxFlip], sizeof(T3DMat4FP));
     		t3d_skeleton_use(&gArmyGatorSkel);
@@ -578,7 +812,21 @@ int main(void) {
 		t3d_matrix_pop(1);
 		skipDraw:
 
+		if (gLevelID == 0 && gMenuID == MENU_FINISH) {
+			render_finish(updateRate, updateRateF);
+		} else {
+			for (int i = 0; i < 17; i++) {
+				if (gFinishSprites[i]) {
+					sprite_free(gFinishSprites[i]);
+				}
+				if (gFinishVerts) {
+					free_uncached(gFinishVerts);
+				}
+			}
+		}
+
 		menu_render(updateRate, updateRateF);
+
 
     	rdpq_text_printf(NULL, 1, 16, 24, "FPS: %d (%2.1fms)", (int) ceilf(display_get_fps()), (double) (1000.0f / display_get_fps()));
     	//rdpq_text_printf(NULL, 1, 16, 34, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
