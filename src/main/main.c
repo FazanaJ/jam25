@@ -336,8 +336,6 @@ void render_finish(int updateRate, float updateRateF) {
 			gPlayerColours[gPlayerWinner].a = 255;
 			finish_render_verts(-225.0f + (25.0f * gPlayerWinner), 80.0f, -250.0f, 10, scale, scale);
 		}
-	}
-	if (gSubMenu < 3) {
 		rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
 		p.s.scale_log = -2;
 		if (gPlayerWinner == -1) {
@@ -347,6 +345,8 @@ void render_finish(int updateRate, float updateRateF) {
 			rdpq_sprite_upload(TILE0, gFinishSprites[8 + gPlayerWinner], &p);
 			finish_render_verts(-190.0f, 47.0f, -250.0f, 7, 1.25f, 0.75f);
 		}
+	}
+	if (gSubMenu < 3) {
 		p.s.scale_log = -1;
 		x = -225.0f;
 		for (int i = 0; i < 4; i++) {
