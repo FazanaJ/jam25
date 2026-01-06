@@ -1150,6 +1150,10 @@ void hud_render(int updateRate, float updateRateF) {
                             gSubMenuOpt = 0;
                             gMenuOption[0] = 0;
                             gMenuOption[1] = 0;
+                            for (int i = 0; i < 4; i++) {
+                                gPlayerWins[i] = 0;
+                            }
+                            gNumTies = false;
                         }
                     } else {
                         gPauseSub = 0;
@@ -1318,16 +1322,24 @@ void menu_game_finish(int updateRate, float updateRateF) {
         }
         if (input_pressed(PLAYER_ALL, INPUT_A, 2)) {
             input_clear(PLAYER_ALL, INPUT_A);
-            if (gMenuOption[0] == 0) {
+            if (gMenuOption[1] == 0) {
+                game_init(gLevelID, 0);
                 gMenuID = MENU_TITLE;
                 gSubMenu = TITLE_SUB_LEVEL_SELECT;
+                gSubMenuOpt = 1;
+                gMenuOption[0] = 0;
+                gMenuOption[1] = 0;
             } else {
+                game_init(0, gPlayerCount);
+                gSubMenuOpt = 0;
+                gMenuOption[0] = 0;
+                gMenuOption[1] = 0;
                 gMenuID = MENU_TITLE;
                 for (int i = 0; i < 4; i++) {
                     gPlayerWins[i] = 0;
                 }
-                game_init(0, 0);
-                gSubMenu = 0;
+                gNumTies = false;
+                gSubMenu = TITLE_SUB_INIT;
             }
             return;
         }

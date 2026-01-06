@@ -520,6 +520,7 @@ int main(void) {
     T3DViewport viewport = t3d_viewport_create_buffered(2);
 
     while(true) {
+		uint32_t first = get_user_ticks();
     	struct mallinfo mem_info = mallinfo();
 		int ram =  (mem_info.uordblks + (size_t) (((unsigned int) HEAP_START_ADDR - 0x80000000) + 0x10000 + (display_get_width() * display_get_height() * 2)));
 		int tag;
@@ -589,9 +590,10 @@ int main(void) {
 		if (gLevelID == 0 && gArmyGatorBlock) {
 			T3DMat4 mtx;
 			if (gMenuID != MENU_FINISH) {
-				gArmyGatorPos.x = 25.0f;
+				gArmyGatorAnimID = 0;
+				gArmyGatorPos.x = 50.0f;
 				gArmyGatorPos.y = 0.0f;
-				gArmyGatorPos.z = -50.0f;
+				gArmyGatorPos.z = -100.0f;
 				int camID = fm_floorf(gCameraPhase);
 				if (gSubMenu < 4) {
 					int camID1 = fm_floorf(gCameraPhase) + 1;
@@ -633,6 +635,7 @@ int main(void) {
 					}
 				}
 			} else {
+				gArmyGatorAnimID = 1;
 				gArmyGatorPos.x = -120.0f;
 				gArmyGatorPos.y = 0.0f;
 				gArmyGatorPos.z = -215.0f;
@@ -645,6 +648,7 @@ int main(void) {
 			}
 			rdpq_mode_zbuf(true, true);
 			t3d_fog_set_enabled(false);
+			t3d_anim_attach(&gArmyGatorAnims[gArmyGatorAnimID], &gArmyGatorSkel);
 			t3d_anim_update(&gArmyGatorAnims[gArmyGatorAnimID], updateRateF * 0.02f);
 			t3d_skeleton_update(&gArmyGatorSkel);
 			t3d_mat4_identity(&mtx);
@@ -673,6 +677,7 @@ int main(void) {
 		parms.t.mirror = true;
 
 		if (gLevelID != 0) {
+			gCameraPhase = 0.0f;
 			rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
 			for (int i = 0; i < 10; i++) {
 				for (int j = 0; j < 12; j++) {
@@ -818,19 +823,21 @@ int main(void) {
 			for (int i = 0; i < 17; i++) {
 				if (gFinishSprites[i]) {
 					sprite_free(gFinishSprites[i]);
+					gFinishSprites[i] = NULL;
 				}
 				if (gFinishVerts) {
 					free_uncached(gFinishVerts);
+					gFinishVerts = NULL;
 				}
 			}
 		}
 
 		menu_render(updateRate, updateRateF);
 
-
+		unsigned int cpu = TICKS_TO_US(get_user_ticks() - first);
     	rdpq_text_printf(NULL, 1, 16, 24, "FPS: %d (%2.1fms)", (int) ceilf(display_get_fps()), (double) (1000.0f / display_get_fps()));
-    	//rdpq_text_printf(NULL, 1, 16, 34, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
-
+    	rdpq_text_printf(NULL, 1, 16, 34, "CPU: %d (%2.1f%%)", (int) cpu, (double) (cpu / 333));
+    	rdpq_text_printf(NULL, 1, 16, 44, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
 		rdpq_detach_show();
 		ticks += updateRate;
 		if (gGamePaused == false && gMenuID == MENU_NONE) {
