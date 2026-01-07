@@ -79,7 +79,7 @@ T3DVec3 gMainMenuCameraPath[] = {
 	{{-160, 70, -170}},
 	{{120, 75, 130}},
 	{{160, 70, 156}},
-	{{160, 70, 156}},
+	{{140, 70, 0}},
 };
 
 T3DVec3 gMainMenuCameraPathFocus[] = {
@@ -92,7 +92,7 @@ T3DVec3 gMainMenuSelectCoords[] = {
 	{{-190, 60, -250}},
 	{{140, 40, 50}},
 	{{200, 40, 160}},
-	{{200, 40, 160}},
+	{{200, 80, 10}},
 };
 
 float gPlayerCursors[4][3];
@@ -835,9 +835,9 @@ int main(void) {
 		menu_render(updateRate, updateRateF);
 
 		unsigned int cpu = TICKS_TO_US(get_user_ticks() - first);
-    	rdpq_text_printf(NULL, 1, 16, 24, "FPS: %d (%2.1fms)", (int) ceilf(display_get_fps()), (double) (1000.0f / display_get_fps()));
-    	rdpq_text_printf(NULL, 1, 16, 34, "CPU: %d (%2.1f%%)", (int) cpu, (double) (cpu / 333));
-    	rdpq_text_printf(NULL, 1, 16, 44, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
+    	//rdpq_text_printf(NULL, 1, 16, 24, "FPS: %d (%2.1fms)", (int) ceilf(display_get_fps()), (double) (1000.0f / display_get_fps()));
+    	//rdpq_text_printf(NULL, 1, 16, 34, "CPU: %d (%2.1f%%)", (int) cpu, (double) (cpu / 333));
+    	//rdpq_text_printf(NULL, 1, 16, 44, "RAM: %2.3f%s", (double) memsize_float(ram, &tag), gMemSizeTags[tag]);
 		rdpq_detach_show();
 		ticks += updateRate;
 		if (gGamePaused == false && gMenuID == MENU_NONE) {

@@ -145,11 +145,11 @@ void titlescreen_load_assets(void) {
     gMenuSprites[0] = sprite_load("rom://logo.ci8.sprite");
     gMenuSprites[1] = sprite_load("rom://menuoptclosed.rgba32.sprite");
     gMenuSprites[2] = sprite_load("rom://menuoptopen.rgba32.sprite");
-    gMenuSprites[5] = sprite_load("rom://menuopt02.ci8.sprite");
-    gMenuSprites[6] = sprite_load("rom://menuopt12.ci8.sprite");
-    gMenuSprites[7] = sprite_load("rom://menuopt22.ci8.sprite");
-    gMenuSprites[8] = sprite_load("rom://menuopt32.ci8.sprite");
-    gMenuSprites[9] = sprite_load("rom://menuopt02.ci8.sprite");
+    gMenuSprites[5] = sprite_load("rom://menuopt02.rgba32.sprite");
+    gMenuSprites[6] = sprite_load("rom://menuopt12.rgba32.sprite");
+    gMenuSprites[7] = sprite_load("rom://menuopt22.rgba32.sprite");
+    gMenuSprites[8] = sprite_load("rom://menuopt32.rgba32.sprite");
+    gMenuSprites[9] = sprite_load("rom://menuopt42.rgba32.sprite");
     gMenuSprites[10] = sprite_load("rom://controller.rgba32.sprite");
     gGamePaused = true;
 }
@@ -620,6 +620,21 @@ static void menu_render_title(int updateRate, float updateRateF) {
                 x -= gapSize * 2;
                 y += 76 * gScreenMul;
             }
+        }
+    } else if (gSubMenuOpt == 5) {
+        int y = (64 + gTitleOptionsY) * gScreenMul;
+
+        if (y < display_get_height() - (50 * gScreenMul)) {
+            text_draw_centre(0, y + (0 * gScreenMul), "Lead Programmer - Fazana", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (16 * gScreenMul), "Graphics - Fazana", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (32 * gScreenMul), "Voices - Fazana", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (48 * gScreenMul), "Ideas - Fazana", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (64 * gScreenMul), "Investment - Fazana", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (80 * gScreenMul), "Credits - Fazana", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (96 * gScreenMul), "SFX - pixabay.com/sound-effects", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (112 * gScreenMul), "Special Thanks - Fazana", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (128 * gScreenMul), "Junior Lead Deputy Programmer - Fazana", RGBA32(255, 255, 255, 255));
+            text_draw_centre(0, y + (144 * gScreenMul), "Super Special Thanks - Fazana", RGBA32(255, 255, 255, 255));
         }
     }
     if (gSubMenu == TITLE_SUB_LEVEL_SELECT) {
