@@ -46,6 +46,8 @@ typedef struct TroopObj {
 	uint8_t dir;
 	uint8_t type;
 	uint8_t active;
+    uint8_t frame;
+    uint8_t spriteID;
 } TroopObj;
 
 typedef struct LevelData {
@@ -113,13 +115,18 @@ extern rspq_block_t *cursor;
 extern rspq_block_t *dplMapWalls[16];
 extern rspq_block_t *dplMapFloor[16];
 extern rspq_block_t *gBaseBlock;
+extern rspq_block_t *gBaseBlock2;
 extern rspq_block_t *dplMapBottom[16];
+extern rspq_block_t *gTroopBlock;
+extern sprite_t *gTroopSprites[4][5][6];
 
 extern T3DModel *gArmyGatorModel;
 extern rspq_block_t *gArmyGatorBlock;
 extern T3DSkeleton gArmyGatorSkel;
 extern T3DAnim gArmyGatorAnims[4];
 extern T3DModel *gMenuLevelModel;
+extern T3DModel *gBaseBuildingModel;
+extern T3DModel *gBaseBuildingShadowModel;
 extern int gArmyGatorAnimID;
 
 float lerpf(float a, float b, float f);

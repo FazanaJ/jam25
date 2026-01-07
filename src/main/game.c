@@ -287,6 +287,8 @@ void game_run(int updateRate, float updateRateF) {
 				gTroops[j].pos.y = gSpawnerPos[i].y * 32;
 
 				gTroops[j].active = true;
+				gTroops[j].frame = 0;
+				gTroops[j].spriteID = rand() % 4;
 				if (gSpawnerRuinID == i && gSpawnerRuinTime == 0) {
 					gSpawnerRuinTime = 250;
 					gTroops[j].type = (rand() % 4) + 1;
@@ -303,6 +305,10 @@ void game_run(int updateRate, float updateRateF) {
 	for (int i = 0; i < TROOP_COUNT; i++) {
 		if (gTroops[i].active == false) {
 			continue;
+		}
+		gTroops[i].frame += updateRate;
+		if (gTroops[i].frame >= 20) {
+			gTroops[i].frame -= 20;
 		}
 		if (obj_approach(&gTroops[i], updateRateF)) {
 			int x = gTroops[i].pos.x / 32;
@@ -623,6 +629,7 @@ void game_init(int levelID, int playerCount) {
 				verts -= loaded;
 			}
 			t3d_tri_sync();
+			rdpq_sync_pipe();
 		dplMapFloor[k] = rspq_block_end();
 	}
 
@@ -852,6 +859,7 @@ void game_init(int levelID, int playerCount) {
 					verts -= loaded;
 				}
 				t3d_tri_sync();
+				rdpq_sync_pipe();
 			dplMapWalls[k] = rspq_block_end();
 		}
 

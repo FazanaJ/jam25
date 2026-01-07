@@ -230,9 +230,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                 while (gAttractLevelID != prevlev) {
                     gAttractLevelID = (rand() % LEVEL_COUNT);
                 }
-                if (gAttractLevelID == 0) {
-                    gAttractLevelID++;
-                }
+                gAttractLevelID++;
                 gLevelID = -1;
             }
             if (gAttractLevelID != 0) {
@@ -1394,6 +1392,7 @@ void menu_render(int updateRate, float updateRateF) {
         gMenuFlickerTimer = 0;
         gMenuFlicker ^= 1;
     }
+	rdpq_sync_pipe();
 
     if (gPrevMenu != gMenuID) {
         rspq_wait();

@@ -104,11 +104,13 @@ T3DMat4FP gCursorMtx[4][2];
 T3DMat4FP gPointerMtx[4][2];
 
 rspq_block_t *gArrowBlock;
+rspq_block_t *gTroopBlock;
 rspq_block_t *cursor;
 rspq_block_t *dplMapBottom[16];
 rspq_block_t *dplMapWalls[16];
 rspq_block_t *dplMapFloor[16];
 rspq_block_t *gBaseBlock;
+rspq_block_t *gBaseBlock2;
 
 sprite_t *gCursorSprite;
 sprite_t *gArrowSprite;
@@ -123,6 +125,10 @@ sprite_t *gPauseOptionSprites[5];
 sprite_t *gScoreBoardPlayerSprites[4];
 sprite_t *gLevelSprites[16];
 
+sprite_t *gTroopSprites[4][5][6];
+
+T3DModel *gBaseBuildingModel;
+T3DModel *gBaseBuildingShadowModel;
 T3DModel *gArmyGatorModel;
 rspq_block_t *gArmyGatorBlock;
 T3DModel *gMenuLevelModel;
@@ -678,6 +684,9 @@ int main(void) {
 
 		if (gLevelID != 0) {
 			gCameraPhase = 0.0f;
+			rdpq_mode_antialias(AA_NONE);
+			rdpq_mode_combiner(RDPQ_COMBINER_TEX_FLAT);
+			t3d_state_set_drawflags(T3D_FLAG_TEXTURED);
 			rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
 			for (int i = 0; i < 10; i++) {
 				for (int j = 0; j < 12; j++) {
@@ -707,53 +716,68 @@ int main(void) {
 					t3d_matrix_pop(1);
 				}
 			}
+			rdpq_sync_pipe();
 			
+			rdpq_set_mode_standard();
+			rdpq_mode_antialias(AA_STANDARD);
+			rdpq_mode_filter(FILTER_BILINEAR);
+			rdpq_mode_dithering(DITHER_BAYER_BAYER);
+			rdpq_mode_persp(true);
 			for (int i = 0; i < 4; i++) {
 				if (gBasePos[i].x == -1) {
 					continue;
 				}
 				color_t colour = gPlayerColours[i];
-				rdpq_set_prim_color(colour);
 				t3d_matrix_push(&gBaseMtx[i]);
 				rspq_block_run(gBaseBlock);
+				rdpq_set_prim_color(colour);
+				rspq_block_run(gBaseBlock2);
 				t3d_matrix_pop(1);
-
+				rdpq_sync_pipe();
 			}
-			rdpq_sync_pipe();
 
 			for (int i = 0; i < 8; i++) {
 				if (gSpawnerPos[i].x == -1) {
 					continue;
 				}
-				rdpq_set_prim_color(RGBA32(0, 0, 0, 255));
 				t3d_matrix_push(&gSpawnermtx[i]);
 				rspq_block_run(gBaseBlock);
+				rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
+				rspq_block_run(gBaseBlock2);
 				t3d_matrix_pop(1);
-
+				rdpq_sync_pipe();
 			}
-			rdpq_sync_pipe();
 			
-			rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
+			rdpq_sync_pipe();
+			rdpq_set_mode_standard();
+			rdpq_mode_antialias(AA_NONE);
+			rdpq_mode_filter(FILTER_BILINEAR);
+			rdpq_mode_dithering(DITHER_BAYER_BAYER);
+			rdpq_mode_persp(true);
+			rdpq_mode_combiner(RDPQ_COMBINER_TEX_FLAT);
+			rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+			t3d_state_set_drawflags(T3D_FLAG_TEXTURED);
+			rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
 			for (int i = 0; i < TROOP_COUNT; i++) {
 				if (gTroops[i].active == false) {
 					continue;
 				}
 
-				float dir = gTroops[i].dir * M_PI_2;
 				T3DMat4 mtx;
 				//float scale = fm_sinf((float) ticks / 5.0f) * 0.1f;
 				float x = gTroops[i].pos.x;
 				float y = gTroops[i].pos.y;
 				float z = gTroops[i].pos.z;
+				if (gTroops[i].dir != 0) {
+					rdpq_sprite_upload(TILE0, gTroopSprites[gTroops[i].spriteID][gTroops[i].dir][gTroops[i].frame / 4], &parms);
+				}
 				t3d_mat4_identity(&mtx);
-				T3DVec3 angle = {{0, 1, 0}};
-				t3d_mat4_rotate(&mtx, &angle, dir);
 				t3d_mat4_translate(&mtx, x + 16.0f, y, z + 16.0f);
 				//t3d_mat4_scale(&mtx, 1.0f + scale, 1.0f, 1.0f + scale);
 				t3d_mat4_to_fixed(&gTroopsMtx[i][gfxFlip], &mtx);
 				data_cache_hit_writeback(&gTroopsMtx[i][gfxFlip], sizeof(T3DMat4FP));
 				t3d_matrix_push(&gTroopsMtx[i][gfxFlip]);
-				switch (gTroops[i].type) {
+				/*switch (gTroops[i].type) {
 					case TROOP_NORMAL:
 						rdpq_set_prim_color(RGBA32(255, 255, 255, 255));
 						break;
@@ -769,12 +793,16 @@ int main(void) {
 					case TROOP_ROULETTE:
 						rdpq_set_prim_color(RGBA32(255, 0, 255, 255));
 						break;
-				}
-				rspq_block_run(gArrowBlock);
+				}*/
+				rspq_block_run(gTroopBlock);
 				t3d_matrix_pop(1);
+				rdpq_sync_pipe();
 			}
 			rdpq_sync_pipe();
 
+			rdpq_mode_combiner(RDPQ_COMBINER_TEX_FLAT);
+			rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
+			t3d_state_set_drawflags(T3D_FLAG_TEXTURED);
 			if (gGamePaused == false) {
 				rdpq_sprite_upload(TILE0, gCursorSprite, &parms);
 				for (int i = 0; i < gCursorCount; i++) {
