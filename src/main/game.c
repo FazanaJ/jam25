@@ -50,6 +50,15 @@ static int obj_approach(TroopObj *obj, float updateRateF) {
 	return false;
 }
 
+int map_floor_texture(int x, int z) {
+	if (x < 0 || z < 0 || x >= 12 || z >= 10) {
+		return -1;
+	}
+
+	int idx = gCurrentLevel->floorTextures[(z * 12) + x];
+	return idx;
+}
+
 int map_floor_tile(int x, int z) {
 	if (x < 0 || z < 0 || x >= 12 || z >= 10) {
 		return -1;
@@ -425,6 +434,116 @@ void level_0_free(void) {
 	t3d_model_free(gMenuLevelModel);
 }
 
+int floormap_gaps(int x, int z, int texID) {
+	int gaps = GAP_NONE;
+	int temp;
+
+	temp = map_floor_texture(x, z - 1);
+	if (temp != -1 && temp != texID) {
+		gaps |= GAP_TOP;
+	}
+	temp = map_floor_texture(x - 1, z - 1);
+	if (temp != -1 && temp != texID) {
+		int temp2 = map_floor_texture(x - 1, z); // left
+		int temp3 = map_floor_texture(x, z - 1); // up
+		if (temp2 != texID && temp3 != texID) {
+			gaps |= GAP_UPLEFT;
+		}
+	}
+	temp = map_floor_texture(x - 1, z);
+	if (temp != -1 && temp != texID) {
+		gaps |= GAP_LEFT;
+	}
+	temp = map_floor_texture(x - 1, z + 1);
+	if (temp != -1 && temp != texID) {
+		int temp2 = map_floor_texture(x - 1, z); // left
+		int temp3 = map_floor_texture(x, z + 1); // down
+		if (temp2 != texID && temp3 != texID) {
+			gaps |= GAP_DOWNLEFT;
+		}
+	}
+	temp = map_floor_texture(x, z + 1);
+	if (temp != -1 && temp != texID) {
+		gaps |= GAP_BOTTOM;
+	}
+	temp = map_floor_texture(x + 1, z + 1);
+	if (temp != -1 && temp != texID) {
+		int temp2 = map_floor_texture(x + 1, z); // right
+		int temp3 = map_floor_texture(x, z + 1); // down
+		if (temp2 != texID && temp3 != texID) {
+			gaps |= GAP_DOWNRIGHT;
+		}
+	}
+	temp = map_floor_texture(x + 1, z);
+	if (temp != -1 && temp != texID) {
+		gaps |= GAP_RIGHT;
+	}
+	temp = map_floor_texture(x + 1, z - 1);
+	if (temp != -1 && temp != texID) {
+		int temp2 = map_floor_texture(x + 1, z); // right
+		int temp3 = map_floor_texture(x, z - 1); // up
+		if (temp2 != texID && temp3 != texID) {
+			gaps |= GAP_UPRIGHT;
+		}
+	}
+	return gaps;
+}
+
+int floormap_gaps_filter(int x, int z, int texID, int tex2) {
+	int gaps = GAP_NONE;
+	int temp;
+
+	temp = map_floor_texture(x, z - 1);
+	if (temp == tex2) {
+		gaps |= GAP_TOP;
+	}
+	temp = map_floor_texture(x - 1, z - 1);
+	if (temp == tex2) {
+		int temp2 = map_floor_texture(x - 1, z); // left
+		int temp3 = map_floor_texture(x, z - 1); // up
+		if (temp2 == tex2 && temp3 == tex2) {
+			gaps |= GAP_UPLEFT;
+		}
+	}
+	temp = map_floor_texture(x - 1, z);
+	if (temp == tex2) {
+		gaps |= GAP_LEFT;
+	}
+	temp = map_floor_texture(x - 1, z + 1);
+	if (temp == tex2) {
+		int temp2 = map_floor_texture(x - 1, z); // left
+		int temp3 = map_floor_texture(x, z + 1); // down
+		if (temp2 == tex2 && temp3 == tex2) {
+			gaps |= GAP_DOWNLEFT;
+		}
+	}
+	temp = map_floor_texture(x, z + 1);
+	if (temp == tex2) {
+		gaps |= GAP_BOTTOM;
+	}
+	temp = map_floor_texture(x + 1, z + 1);
+	if (temp == tex2) {
+		int temp2 = map_floor_texture(x + 1, z); // right
+		int temp3 = map_floor_texture(x, z + 1); // down
+		if (temp2 == tex2 && temp3 == tex2) {
+			gaps |= GAP_DOWNRIGHT;
+		}
+	}
+	temp = map_floor_texture(x + 1, z);
+	if (temp == tex2) {
+		gaps |= GAP_RIGHT;
+	}
+	temp = map_floor_texture(x + 1, z - 1);
+	if (temp == tex2) {
+		int temp2 = map_floor_texture(x + 1, z); // right
+		int temp3 = map_floor_texture(x, z - 1); // up
+		if (temp2 == tex2 && temp3 == tex2) {
+			gaps |= GAP_UPRIGHT;
+		}
+	}
+	return gaps;
+}
+
 void game_init(int levelID, int playerCount) {
 
 	rspq_call_deferred((void *) level_free, NULL);
@@ -500,25 +619,46 @@ void game_init(int levelID, int playerCount) {
 
 	gCurrentLevel = &gMapLevel2[levelID - 1];
 
+	int lmao[12 * 10];
+
 	for (int k = 0; k < 16; k++) {
 		int verts = 0;
+		int baseVerts = 0;
 		int tris = 0;
+		T3DVertPacked *multiVerts[16] = {0};
+		int multiVertCount[16] = {0};
 		for (int i = 0; i < 10; i++) {
 			for (int j = 0; j < 12; j++) {
 				int idx = (i * 12) + j;
+				int oldVerts = verts;
 				if (gCurrentLevel->floorTextures[idx] == k) {
+					baseVerts += 4;
 					verts += 4;
 					tris += 2;
+					int gaps = floormap_gaps(j, i, k);
+					for (int b = 0; b < 8; b++) {
+						if ((gaps & (1 << b))) {
+							verts += 4;
+							tris += 2;
+						}
+					}
 				}
+				lmao[idx] = verts - oldVerts;
 			}
 		}
+
 
 		if (verts == 0) {
 			continue;
 		}
+		//debugf("Verts Allocated: %d\n", verts);
 
 		gLevelFloorVtx[k] = malloc((sizeof(T3DVertPacked) * verts) + 0x10);
 		T3DVertPacked *valign = _ALIGN16(gLevelFloorVtx[k]);
+
+		#define GAP_SIZE 4
+		#define UV_GAP_SIZE (GAP_SIZE * 64)
+		#define UV_GAP_SIZE2 (GAP_SIZE * 32)
 
 		int x = 0;
 		int z = 0;
@@ -533,103 +673,330 @@ void game_init(int levelID, int playerCount) {
 					int colourB;
 					int alpha = 255;
 					int y;
+					int floorGap = GAP_NONE;
+					int x0 = x;
+					int x1 = x + 32;
+					int z0 = z;
+					int z1 = z + 32;
+					int u0 = u;
+					int v0 = v;
+					int u1 = u + 1024;
+					int v1 = v + 1024;
+					colourA = 0xFFFFFF00;
+					colourB = 0xFFFFFF00;
+					colourA += alpha;
+					colourB += alpha;
 					if (gCurrentLevel->floorTiles[idx] != 0) {
 						y = gMapLevelHeights[(gCurrentLevel->floorTiles[idx] - 1) % 8];
-						colourA = 0xFFFFFF00;
-						colourB = 0xFFFFFF00;
-						if (map_floor_tile(j, i - 1) == -1) {
-							colourA = 0x7F7F7F00;
-							colourB = 0x7F7F7F00;
-						} else {
-							if (map_floor_tile(j - 1, i - 1) == -1) {
-								colourA = 0x7F7F7F00;
-							}
-							if (map_floor_tile(j + 1, i - 1) == -1) {
-								colourB = 0x7F7F7F00;
-							}
-						}
-						if (map_floor_tile(j - 1, i) == -1) {
-							colourA = 0x7F7F7F00;
-						}
-						if (map_floor_tile(j + 1, i) == -1) {
-							colourB = 0x7F7F7F00;
-						}
-						colourA += alpha;
-						colourB += alpha;
 					} else {
-						colourA = 0x000000FF;
-						colourB = 0x000000FF;
 						y = -32;
 					}
-					valign[p++] = (T3DVertPacked){
-						.posA = {x, y, z}, .rgbaA = colourA, .stA = {u, v},
-						.posB = {x + 32, y, z}, .rgbaB = colourB, .stB = {u + 512, v},
-					};
-					if (gCurrentLevel->floorTiles[idx] != 0) {
-						colourA = 0xFFFFFF00;
-						colourB = 0xFFFFFF00;
-						if (map_floor_tile(j, i + 1) == -1) {
-							colourA = 0x7F7F7F00;
-							colourB = 0x7F7F7F00;
-						} else {
-							if (map_floor_tile(j - 1, i + 1) == -1) {
-								colourA = 0x7F7F7F00;
-							}
-							if (map_floor_tile(j + 1, i + 1) == -1) {
-								colourB = 0x7F7F7F00;
-							}
-						}
-						if (map_floor_tile(j - 1, i) == -1) {
-							colourA = 0x7F7F7F00;
-						}
-						if (map_floor_tile(j + 1, i) == -1) {
-							colourB = 0x7F7F7F00;
-						}
-						colourA += alpha;
-						colourB += alpha;
-					} else {
-						colourA = 0x000000FF;
-						colourB = 0x000000FF;
+					floorGap = floormap_gaps(j, i, k);
+					if (floorGap & (GAP_TOP | GAP_UPLEFT | GAP_UPRIGHT)) {
+						z0 += GAP_SIZE;
+						v0 += GAP_SIZE * 32;
+					}
+					if (floorGap & (GAP_BOTTOM | GAP_DOWNLEFT | GAP_DOWNRIGHT)) {
+						z1 -= GAP_SIZE;
+						v1 -= GAP_SIZE * 32;
+					}
+					if (floorGap & (GAP_LEFT | GAP_UPLEFT | GAP_DOWNLEFT)) {
+						x0 += GAP_SIZE;
+						u0 += GAP_SIZE * 32;
+					}
+					if (floorGap & (GAP_RIGHT | GAP_UPRIGHT | GAP_DOWNRIGHT)) {
+						x1 -= GAP_SIZE;
+						u1 -= GAP_SIZE * 32;
 					}
 					valign[p++] = (T3DVertPacked){
-						.posA = {x + 32, y, z + 32}, .rgbaA = colourB, .stA = {u + 512, v + 512},
-						.posB = {x, y, z + 32}, .rgbaB = colourA, .stB = {u, v + 512},
+						.posA = {x0, y, z0}, .rgbaA = colourA, .stA = {u0, v0},
+						.posB = {x1, y, z0}, .rgbaB = colourB, .stB = {u1, v0},
+					};
+					valign[p++] = (T3DVertPacked){
+						.posA = {x1, y, z1}, .rgbaA = colourB, .stA = {u1, v1},
+						.posB = {x0, y, z1}, .rgbaB = colourA, .stB = {u0, v1},
 					};
 				}
 				x += 32;
-				u += 512;
+				u += 1024;
 			}
 			x = 0;
 			u = 0;
 			z += 32;
-			v += 512;
+			v += 1024;
 		}
 
 		rdpq_texparms_t parms = {0};
 		parms.s.repeats = REPEAT_INFINITE;
 		parms.t.repeats = REPEAT_INFINITE;
 
-		data_cache_hit_writeback(valign, sizeof(T3DVertPacked) * verts);
+		data_cache_hit_writeback(valign, sizeof(T3DVertPacked) * baseVerts);
 
+		int vertCount = baseVerts;
 		rspq_block_begin();
+			rdpq_sync_pipe();
 			rdpq_mode_combiner(RDPQ_COMBINER_TEX_SHADE);
 			rdpq_sprite_upload(TILE0, gLevelSprites[k], &parms);
 			t3d_state_set_drawflags(T3D_FLAG_SHADED | T3D_FLAG_TEXTURED | T3D_FLAG_NO_LIGHT);
 
 			int vertOff = 0;
-			while (verts > 0) {
+			while (vertCount > 0) {
 				const int size = (T3D_VERTEX_CACHE_SIZE / 4) * 4;
-				int loaded = MIN(size, verts);
+				int loaded = MIN(size, vertCount);
 				t3d_vert_load(&valign[vertOff], 0, loaded);
 				for (int i = 0; i < loaded; i += 4) {
 					t3d_tri_draw(0 + i, 1 + i, 2 + i);
 					t3d_tri_draw(2 + i, 3 + i, 0 + i);
 				}
 				vertOff += loaded / 2;
-				verts -= loaded;
+				vertCount -= loaded;
 			}
 			t3d_tri_sync();
 			rdpq_sync_pipe();
+			rdpq_mode_combiner(RDPQ_COMBINER2((TEX0, TEX1, SHADE_ALPHA, TEX1), (0, 0, 0, 0), (COMBINED, 0, SHADE, 0), (0, 0, 0, ENV)));
+			//debugf("Base Vert count: %d - P ness: %d   base %d id %d\n", baseVerts, p * 2, k, k);
+
+			for (int matID = 0; matID < 16; matID++) {
+				x = 0;
+				z = 0;
+				u = 0;
+				v = 0;
+				if (matID == k) {
+					continue;
+				}
+				int partVertCount = p;
+				int firstP = p;
+				for (int i = 0; i < 10; i++) {
+					for (int j = 0; j < 12; j++) {
+						int idx = (i * 12) + j;
+						if (gCurrentLevel->floorTextures[idx] == k) {
+							int colourA;
+							int colourB;
+							int alphaA = 255;
+							int alphaB = 255;
+							colourA = 0xFFFFFFFF;
+							colourB = 0xFFFFFFFF;
+							int y;
+							int floorGap = GAP_NONE;
+							y = gMapLevelHeights[(gCurrentLevel->floorTiles[idx] - 1) % 8];
+							floorGap = floormap_gaps_filter(j, i, k, matID);
+							if (floorGap != GAP_NONE) {
+								if (floorGap & GAP_TOP) {
+									int x0 = x;
+									int x1 = x + 32;
+									int z0 = z;
+									int z1 = z + GAP_SIZE;
+									int u0 = u;
+									int u1 = u + 1024;
+									int v0 = v;
+									int v1 = v + UV_GAP_SIZE2;
+									if (floorGap & GAP_UPLEFT) {
+										x0 += GAP_SIZE;
+										u0 += UV_GAP_SIZE2;
+									}
+									if (floorGap & GAP_UPRIGHT) {
+										x1 -= GAP_SIZE;
+										u1 -= UV_GAP_SIZE2;
+									}
+									valign[p++] = (T3DVertPacked){
+										.posA = {x0, y, z0}, .rgbaA = 0xFFFFFF7F, .stA = {u0, v0},
+										.posB = {x1, y, z0}, .rgbaB = 0xFFFFFF7F, .stB = {u1, v0},
+									};
+									valign[p++] = (T3DVertPacked){
+										.posA = {x1, y, z1}, .rgbaA = colourB, .stA = {u1, v1},
+										.posB = {x0, y, z1}, .rgbaB = colourA, .stB = {u0, v1},
+									};
+								}
+								if (floorGap & GAP_UPLEFT) {
+									int x0 = x;
+									int x1 = x + GAP_SIZE;
+									int z0 = z;
+									int z1 = z + GAP_SIZE;
+									int u0 = u;
+									int u1 = u + UV_GAP_SIZE2;
+									int v0 = v;
+									int v1 = v + UV_GAP_SIZE2;
+									valign[p++] = (T3DVertPacked){
+										.posA = {x0, y, z0}, .rgbaA = 0xFFFFFF7F, .stA = {u0, v0},
+										.posB = {x1, y, z0}, .rgbaB = 0xFFFFFF7F, .stB = {u1, v0},
+									};
+									valign[p++] = (T3DVertPacked){
+										.posA = {x1, y, z1}, .rgbaA = colourB, .stA = {u1, v1},
+										.posB = {x0, y, z1}, .rgbaB = 0xFFFFFF7F, .stB = {u0, v1},
+									};
+								}
+								if (floorGap & GAP_UPRIGHT) {
+									int x0 = x + 32 - GAP_SIZE;
+									int x1 = x + 32;
+									int z0 = z;
+									int z1 = z + GAP_SIZE;
+									int u0 = u + 1024 - UV_GAP_SIZE2;
+									int u1 = u + 1024;
+									int v0 = v;
+									int v1 = v + UV_GAP_SIZE2;
+									valign[p++] = (T3DVertPacked){
+										.posA = {x0, y, z0}, .rgbaA = 0xFFFFFF7F, .stA = {u0, v0},
+										.posB = {x1, y, z0}, .rgbaB = 0xFFFFFF7F, .stB = {u1, v0},
+									};
+									valign[p++] = (T3DVertPacked){
+										.posA = {x1, y, z1}, .rgbaA = 0xFFFFFF7F, .stA = {u1, v1},
+										.posB = {x0, y, z1}, .rgbaB = colourA, .stB = {u0, v1},
+									};
+								}
+								if (floorGap & GAP_BOTTOM) {
+									int x0 = x;
+									int x1 = x + 32;
+									int z0 = z + 32 - GAP_SIZE;
+									int z1 = z + 32;
+									int u0 = u;
+									int u1 = u + 1024;
+									int v0 = v + 1024 - UV_GAP_SIZE2;
+									int v1 = v + 1024;
+									if (floorGap & GAP_DOWNLEFT) {
+										x0 += GAP_SIZE;
+										u0 += UV_GAP_SIZE2;
+									}
+									if (floorGap & GAP_DOWNRIGHT) {
+										x1 -= GAP_SIZE;
+										u1 -= UV_GAP_SIZE2;
+									}
+									valign[p++] = (T3DVertPacked){
+										.posA = {x0, y, z0}, .rgbaA = colourA, .stA = {u0, v0},
+										.posB = {x1, y, z0}, .rgbaB = colourB, .stB = {u1, v0},
+									};
+									valign[p++] = (T3DVertPacked){
+										.posA = {x1, y, z1}, .rgbaA = 0xFFFFFF7F, .stA = {u1, v1},
+										.posB = {x0, y, z1}, .rgbaB = 0xFFFFFF7F, .stB = {u0, v1},
+									};
+								}
+								if (floorGap & GAP_DOWNLEFT) {
+									int x0 = x;
+									int x1 = x + GAP_SIZE;
+									int z0 = z + 32 - GAP_SIZE;
+									int z1 = z + 32;
+									int u0 = u;
+									int u1 = u + UV_GAP_SIZE2;
+									int v0 = v + 1024 - UV_GAP_SIZE2;
+									int v1 = v + 1024;
+									valign[p++] = (T3DVertPacked){
+										.posA = {x0, y, z0}, .rgbaA = 0xFFFFFF7F, .stA = {u0, v0},
+										.posB = {x1, y, z0}, .rgbaB = colourB, .stB = {u1, v0},
+									};
+									valign[p++] = (T3DVertPacked){
+										.posA = {x1, y, z1}, .rgbaA = 0xFFFFFF7F, .stA = {u1, v1},
+										.posB = {x0, y, z1}, .rgbaB = 0xFFFFFF7F, .stB = {u0, v1},
+									};
+								}
+								if (floorGap & GAP_DOWNRIGHT) {
+									int x0 = x + 32 - GAP_SIZE;
+									int x1 = x + 32;
+									int z0 = z + 32 - GAP_SIZE;
+									int z1 = z + 32;
+									int u0 = u + 1024 - UV_GAP_SIZE2;
+									int u1 = u + 1024;
+									int v0 = v + 1024 - UV_GAP_SIZE2;
+									int v1 = v + 1024;
+									valign[p++] = (T3DVertPacked){
+										.posA = {x0, y, z0}, .rgbaA = colourA, .stA = {u0, v0},
+										.posB = {x1, y, z0}, .rgbaB = 0xFFFFFF7F, .stB = {u1, v0},
+									};
+									valign[p++] = (T3DVertPacked){
+										.posA = {x1, y, z1}, .rgbaA = 0xFFFFFF7F, .stA = {u1, v1},
+										.posB = {x0, y, z1}, .rgbaB = 0xFFFFFF7F, .stB = {u0, v1},
+									};
+								}
+								if (floorGap & GAP_LEFT) {
+									int x0 = x;
+									int x1 = x + GAP_SIZE;
+									int z0 = z;
+									int z1 = z + 32;
+									int u0 = u;
+									int u1 = u + UV_GAP_SIZE2;
+									int v0 = v;
+									int v1 = v + 1024;
+									if (floorGap & GAP_UPLEFT) {
+										z0 += GAP_SIZE;
+										v0 += UV_GAP_SIZE2;
+									}
+									if (floorGap & GAP_DOWNLEFT) {
+										z1 -= GAP_SIZE;
+										v1 -= UV_GAP_SIZE2;
+									}
+									valign[p++] = (T3DVertPacked){
+										.posA = {x0, y, z0}, .rgbaA = 0xFFFFFF7F, .stA = {u0, v0},
+										.posB = {x1, y, z0}, .rgbaB = colourB, .stB = {u1, v0},
+									};
+									valign[p++] = (T3DVertPacked){
+										.posA = {x1, y, z1}, .rgbaA = colourB, .stA = {u1, v1},
+										.posB = {x0, y, z1}, .rgbaB = 0xFFFFFF7F, .stB = {u0, v1},
+									};
+								}
+								if (floorGap & GAP_RIGHT) {
+									int x0 = x + 32 - GAP_SIZE;
+									int x1 = x + 32;
+									int z0 = z;
+									int z1 = z + 32;
+									int u0 = u + 1024 - UV_GAP_SIZE2;
+									int u1 = u + 1024;
+									int v0 = v;
+									int v1 = v + 1024;
+									if (floorGap & GAP_UPRIGHT) {
+										z0 += GAP_SIZE;
+										v0 += UV_GAP_SIZE2;
+									}
+									if (floorGap & GAP_DOWNRIGHT) {
+										z1 -= GAP_SIZE;
+										v1 -= UV_GAP_SIZE2;
+									}
+									valign[p++] = (T3DVertPacked){
+										.posA = {x0, y, z0}, .rgbaA = colourA, .stA = {u0, v0},
+										.posB = {x1, y, z0}, .rgbaB = 0xFFFFFF7F, .stB = {u1, v0},
+									};
+									valign[p++] = (T3DVertPacked){
+										.posA = {x1, y, z1}, .rgbaA = 0xFFFFFF7F, .stA = {u1, v1},
+										.posB = {x0, y, z1}, .rgbaB = colourA, .stB = {u0, v1},
+									};
+								}
+							}
+						}
+						x += 32;
+						u += 1024;
+					}
+					x = 0;
+					u = 0;
+					z += 32;
+					v += 1024;
+				}
+				
+				partVertCount = (p - partVertCount) * 2;
+
+				if (partVertCount == 0) {
+					continue;
+				}
+				//debugf("Vert count: %d - P ness: %d   base %d id %d\n", partVertCount, p * 2, k, matID);
+				rdpq_tex_multi_begin();
+				rdpq_sprite_upload(TILE0, gLevelSprites[k], &parms);
+				rdpq_sprite_upload(TILE1, gLevelSprites[matID], &parms);
+				rdpq_tex_multi_end();
+				data_cache_hit_writeback(valign, sizeof(T3DVertPacked) * verts);
+
+				vertOff = firstP;
+				vertCount = partVertCount;
+				while (vertCount > 0) {
+					const int size = (T3D_VERTEX_CACHE_SIZE / 4) * 4;
+					int loaded = MIN(size, vertCount);
+					t3d_vert_load(&valign[vertOff], 0, loaded);
+					for (int i = 0; i < loaded; i += 4) {
+						t3d_tri_draw(0 + i, 1 + i, 2 + i);
+						t3d_tri_draw(2 + i, 3 + i, 0 + i);
+					}
+					vertOff += loaded / 2;
+					vertCount -= loaded;
+				}
+
+				t3d_tri_sync();
+				rdpq_sync_pipe();
+			}
 		dplMapFloor[k] = rspq_block_end();
 	}
 

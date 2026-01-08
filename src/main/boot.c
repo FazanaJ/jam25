@@ -62,7 +62,7 @@ void boot(void) {
 	gPauseOptionSprites[2] = sprite_load("rom://pauseopt3.i8.sprite");
 	gPauseOptionSprites[3] = sprite_load("rom://menuconfirm1.i8.sprite");
 	gPauseOptionSprites[4] = sprite_load("rom://menuconfirm2.i8.sprite");
-	gLevelSprites[0] = sprite_load("rom://sand12.ci4.sprite");
+	gLevelSprites[0] = sprite_load("rom://sand12.rgba16.sprite");
 	gLevelSprites[1] = sprite_load("rom://roadpath0.rgba16.sprite");
 	gLevelSprites[2] = sprite_load("rom://grass0.rgba16.sprite");
 	gLevelSprites[3] = sprite_load("rom://fence2.rgba16.sprite");
