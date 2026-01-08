@@ -46,7 +46,6 @@ float gPlayerSelectScale[5];
 float gTitleOptionScale[5];
 char *gTitleStrings[] = {
     "Quick Play",
-    "Challenges",
     "Tutorial",
     "Options",
     "Credits"
@@ -146,10 +145,9 @@ void titlescreen_load_assets(void) {
     gMenuSprites[1] = sprite_load("rom://menuoptclosed.rgba32.sprite");
     gMenuSprites[2] = sprite_load("rom://menuoptopen.rgba32.sprite");
     gMenuSprites[5] = sprite_load("rom://menuopt02.rgba32.sprite");
-    gMenuSprites[6] = sprite_load("rom://menuopt12.rgba32.sprite");
-    gMenuSprites[7] = sprite_load("rom://menuopt22.rgba32.sprite");
-    gMenuSprites[8] = sprite_load("rom://menuopt32.rgba32.sprite");
-    gMenuSprites[9] = sprite_load("rom://menuopt42.rgba32.sprite");
+    gMenuSprites[6] = sprite_load("rom://menuopt22.rgba32.sprite");
+    gMenuSprites[7] = sprite_load("rom://menuopt32.rgba32.sprite");
+    gMenuSprites[8] = sprite_load("rom://menuopt42.rgba32.sprite");
     gMenuSprites[10] = sprite_load("rom://controller.rgba32.sprite");
     gGamePaused = true;
 }
@@ -355,8 +353,8 @@ static void menu_render_title(int updateRate, float updateRateF) {
 
         if (gMenuOption[0] <= 0) {
             gMenuOption[0] = 0;
-        } else if (gMenuOption[0] >= 5) {
-            gMenuOption[0] = 4;
+        } else if (gMenuOption[0] >= 4) {
+            gMenuOption[0] = 3;
         }
         if (prevOpt != gMenuOption[0]) {
             sound_play_global(SOUND_MENU_MOVE);
@@ -442,8 +440,8 @@ static void menu_render_title(int updateRate, float updateRateF) {
         rdpq_set_mode_standard();
         rdpq_mode_filter(FILTER_BILINEAR);
         const int gapsize = 48 * gScreenMul;
-        int x = (display_get_width() - (4 * gapsize)) / 2;
-        for (int i = 0; i < 5; i++) {
+        int x = (display_get_width() - (3 * gapsize)) / 2;
+        for (int i = 0; i < 4; i++) {
             int open;
             float s;
             if (gMenuOption[0] == i) {
@@ -493,8 +491,8 @@ static void menu_render_title(int updateRate, float updateRateF) {
 
             x += gapsize;
         }
-        x = (display_get_width() - (4 * gapsize)) / 2;
-        for (int i = 0; i < 5; i++) {
+        x = (display_get_width() - (3 * gapsize)) / 2;
+        for (int i = 0; i < 4; i++) {
             int open;
             float s;
             if (gMenuOption[0] == i) {
@@ -637,6 +635,14 @@ static void menu_render_title(int updateRate, float updateRateF) {
     }
     if (gSubMenu == TITLE_SUB_LEVEL_SELECT) {
         gTitleOptionsY = lerpf(gTitleOptionsY, -240, 0.1f * updateRateF);
+        char textBytes[32];
+
+        float y = gTitleOptionsY + 240;
+
+        text_draw_centre(0, y + (24 * gScreenMul), "Select Map", RGBA32(255, 255, 255, 255));
+        
+        sprintf(textBytes, "Map #%d", gMenuOption[3] + 1);
+        text_draw_centre(0, y + (200 * gScreenMul), textBytes, RGBA32(255, 255, 255, 255));
 
         int prevOpt = gMenuOption[3];
         menu_stick_options(PLAYER_ALL, &gMenuOption[3], NULL);

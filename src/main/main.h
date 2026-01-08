@@ -5,7 +5,7 @@
 #include <t3d/t3dskeleton.h>
 
 #define TROOP_COUNT 100
-#define LEVEL_COUNT 3
+#define LEVEL_COUNT 8
 #define ARROW_TOTAL (12 * 10)
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
