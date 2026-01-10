@@ -46,8 +46,9 @@ float gPlayerSelectScale[5];
 float gTitleOptionScale[5];
 char *gTitleStrings[] = {
     "Quick Play",
+    //"Challenges",
     "Tutorial",
-    "Options",
+    //"Options",
     "Credits"
 };
 char *gOptionsMenuStrings[] = {
@@ -146,8 +147,7 @@ void titlescreen_load_assets(void) {
     gMenuSprites[2] = sprite_load("rom://menuoptopen.rgba32.sprite");
     gMenuSprites[5] = sprite_load("rom://menuopt02.rgba32.sprite");
     gMenuSprites[6] = sprite_load("rom://menuopt22.rgba32.sprite");
-    gMenuSprites[7] = sprite_load("rom://menuopt32.rgba32.sprite");
-    gMenuSprites[8] = sprite_load("rom://menuopt42.rgba32.sprite");
+    gMenuSprites[7] = sprite_load("rom://menuopt42.rgba32.sprite");
     gMenuSprites[10] = sprite_load("rom://controller.rgba32.sprite");
     gGamePaused = true;
 }
@@ -353,8 +353,8 @@ static void menu_render_title(int updateRate, float updateRateF) {
 
         if (gMenuOption[0] <= 0) {
             gMenuOption[0] = 0;
-        } else if (gMenuOption[0] >= 4) {
-            gMenuOption[0] = 3;
+        } else if (gMenuOption[0] >= 3) {
+            gMenuOption[0] = 2;
         }
         if (prevOpt != gMenuOption[0]) {
             sound_play_global(SOUND_MENU_MOVE);
@@ -440,8 +440,8 @@ static void menu_render_title(int updateRate, float updateRateF) {
         rdpq_set_mode_standard();
         rdpq_mode_filter(FILTER_BILINEAR);
         const int gapsize = 48 * gScreenMul;
-        int x = (display_get_width() - (3 * gapsize)) / 2;
-        for (int i = 0; i < 4; i++) {
+        int x = (display_get_width() - (2 * gapsize)) / 2;
+        for (int i = 0; i < 3; i++) {
             int open;
             float s;
             if (gMenuOption[0] == i) {
@@ -491,8 +491,8 @@ static void menu_render_title(int updateRate, float updateRateF) {
 
             x += gapsize;
         }
-        x = (display_get_width() - (3 * gapsize)) / 2;
-        for (int i = 0; i < 4; i++) {
+        x = (display_get_width() - (2 * gapsize)) / 2;
+        for (int i = 0; i < 3; i++) {
             int open;
             float s;
             if (gMenuOption[0] == i) {
@@ -617,7 +617,7 @@ static void menu_render_title(int updateRate, float updateRateF) {
                 y += 76 * gScreenMul;
             }
         }
-    } else if (gSubMenuOpt == 5) {
+    } else if (gSubMenuOpt == 3) {
         int y = (64 + gTitleOptionsY) * gScreenMul;
 
         if (y < display_get_height() - (50 * gScreenMul)) {
