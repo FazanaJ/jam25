@@ -62,17 +62,6 @@ SoundData sSoundTable[SOUND_COUNT] = {
     {"rom://leader2.1.wav64", 10},
     {"rom://leader3.1.wav64", 10},
     {"rom://leader4.1.wav64", 10},
-    
-    {"rom://tutorial1.1.wav64", 10},
-    {"rom://tutorial2.1.wav64", 10},
-    {"rom://tutorial3.1.wav64", 10},
-    {"rom://tutorial4.1.wav64", 10},
-    {"rom://tutorial5.1.wav64", 10},
-    {"rom://tutorial6.1.wav64", 10},
-    {"rom://tutorial7.1.wav64", 10},
-    {"rom://tutorial8.1.wav64", 10},
-    {"rom://tutorial9.1.wav64", 10},
-    {"rom://tutorial10.1.wav64", 10},
 
     {"rom://arrow1.1.wav64", 10},
     {"rom://arrow2.1.wav64", 10},

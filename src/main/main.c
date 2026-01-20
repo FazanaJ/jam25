@@ -458,10 +458,10 @@ void bg_render(void) {
 
 		int width = display_get_width();
 		int height = (display_get_height() * 0.8f) / 16;
-		int x = 72 * gScreenMul;
-		int x2 = display_get_width() - (72 * gScreenMul);
+		int x = 80 * gScreenMul;
+		int x2 = display_get_width() - (80 * gScreenMul);
 		float step = 4 * gScreenMul;
-		int y = 8 * gScreenMul;
+		int y = 16 * gScreenMul;
 
 		rdpq_fill_rectangle(0, 0, width, y);
 		rdpq_fill_rectangle(x, y, x2, y + height);
@@ -570,7 +570,7 @@ int main(void) {
 		data_cache_hit_writeback(&gMapMtx[gfxFlip], sizeof(T3DMat4FP));
 		t3d_matrix_push(&gMapMtx[gfxFlip]);
 		rdpq_set_mode_standard();
-		rdpq_mode_antialias(AA_STANDARD);
+		rdpq_mode_antialias(AA_REDUCED);
 		rdpq_mode_filter(FILTER_BILINEAR);
 		rdpq_mode_dithering(DITHER_BAYER_BAYER);
 		rdpq_mode_persp(true);
@@ -589,6 +589,7 @@ int main(void) {
 				rspq_block_run(dplMapWalls[i]);
 			}
 		}
+		rdpq_mode_antialias(AA_STANDARD);
 
 		if (gMenuID != MENU_TITLE) {
 			gCameraPhase = 0.0f;
@@ -685,7 +686,8 @@ int main(void) {
 		if (gLevelID != 0) {
 			gCameraPhase = 0.0f;
 			rdpq_mode_antialias(AA_NONE);
-			rdpq_mode_combiner(RDPQ_COMBINER_TEX_FLAT);
+			rdpq_mode_combiner(RDPQ_COMBINER1((TEX0, PRIM, TEX0, PRIM), (TEX0, 0, PRIM, 0)));
+			rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);
 			t3d_state_set_drawflags(T3D_FLAG_TEXTURED);
 			rdpq_sprite_upload(TILE0, gArrowSprite, &parms);
 			for (int i = 0; i < 10; i++) {
@@ -719,8 +721,10 @@ int main(void) {
 			rdpq_sync_pipe();
 			
 			rdpq_set_mode_standard();
-			rdpq_mode_antialias(AA_STANDARD);
+			rdpq_mode_antialias(AA_REDUCED);
+			rdpq_mode_combiner(RDPQ_COMBINER_TEX_FLAT);
 			rdpq_mode_filter(FILTER_BILINEAR);
+			rdpq_mode_blender(false);
 			rdpq_mode_dithering(DITHER_BAYER_BAYER);
 			rdpq_mode_persp(true);
 			for (int i = 0; i < 4; i++) {
@@ -769,7 +773,9 @@ int main(void) {
 				float y = gTroops[i].pos.y;
 				float z = gTroops[i].pos.z;
 				if (gTroops[i].dir != 0) {
-					rdpq_sprite_upload(TILE0, gTroopSprites[gTroops[i].spriteID][gTroops[i].dir][gTroops[i].frame / 4], &parms);
+					rdpq_sprite_upload(TILE0, gTroopSprites[0][gTroops[i].dir][gTroops[i].frame / 4], &parms);
+				} else {
+					rdpq_sprite_upload(TILE0, gTroopSprites[0][0][0], &parms);
 				}
 				t3d_mat4_identity(&mtx);
 				t3d_mat4_translate(&mtx, x + 16.0f, y, z + 16.0f);
@@ -798,7 +804,6 @@ int main(void) {
 				t3d_matrix_pop(1);
 				rdpq_sync_pipe();
 			}
-			rdpq_sync_pipe();
 
 			rdpq_mode_combiner(RDPQ_COMBINER_TEX_FLAT);
 			rdpq_mode_blender(RDPQ_BLENDER_MULTIPLY);

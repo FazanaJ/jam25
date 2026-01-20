@@ -298,13 +298,14 @@ void game_run(int updateRate, float updateRateF) {
 				gTroops[j].active = true;
 				gTroops[j].frame = 0;
 				gTroops[j].spriteID = rand() % 4;
-				if (gSpawnerRuinID == i && gSpawnerRuinTime == 0) {
+				/*if (gSpawnerRuinID == i && gSpawnerRuinTime == 0) {
 					gSpawnerRuinTime = 250;
 					gTroops[j].type = (rand() % 4) + 1;
 				} else {
 					
 					gTroops[j].type = TROOP_NORMAL;
-				}
+				}*/
+				gTroops[j].type = TROOP_NORMAL;
 				gTroops[j].dir = (rand() % 4) + 1;
 				break;
 			}
@@ -564,6 +565,11 @@ void game_init(int levelID, int playerCount) {
 		gAIDifficulty[1] = AIDIFF_HARD;
 		gAIDifficulty[2] = AIDIFF_HARD;
 		gAIDifficulty[3] = AIDIFF_HARD;
+	} else {
+		gAIDifficulty[0] = AIDIFF_EASY;
+		gAIDifficulty[1] = AIDIFF_EASY;
+		gAIDifficulty[2] = AIDIFF_EASY;
+		gAIDifficulty[3] = AIDIFF_EASY;
 	}
 	if (gArmyGatorBlock) {
 		rspq_call_deferred((void *) level_0_free, NULL);

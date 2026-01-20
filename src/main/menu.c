@@ -632,6 +632,20 @@ static void menu_render_title(int updateRate, float updateRateF) {
             text_draw_centre(0, y + (128 * gScreenMul), "Junior Lead Deputy Programmer - Fazana", RGBA32(255, 255, 255, 255));
             text_draw_centre(0, y + (144 * gScreenMul), "Super Special Thanks - Fazana", RGBA32(255, 255, 255, 255));
         }
+    } else if (gSubMenuOpt == 2) {
+        int y = (64 + gTitleOptionsY) * gScreenMul;
+
+        if (y < display_get_height() - (50 * gScreenMul)) {
+            text_draw_centre(0, y + (0 * gScreenMul), "Control Stick - Move\n" \
+                                                      "C Buttons - Place Arrow\n"
+                                                      "Arrows place correspond to\n"
+                                                      "direction of the C button.\n"
+                                                      "Guide all customers to your\n"
+                                                      "repair shop. it is marked \n"
+                                                      "with the team colour. The\n"
+                                                      "Winner is who conducts the\n"
+                                                      "most business of all.", RGBA32(255, 255, 255, 255));
+        }
     }
     if (gSubMenu == TITLE_SUB_LEVEL_SELECT) {
         gTitleOptionsY = lerpf(gTitleOptionsY, -240, 0.1f * updateRateF);

@@ -45,7 +45,7 @@ void boot(void) {
 	gBaseBuildingModel = t3d_model_load("rom://basebuilding.t3dm");
 	gBaseBuildingShadowModel = t3d_model_load("rom://basebuildingshadow.t3dm");
 	gCursorSprite = sprite_load("rom://cursor.i4.sprite");
-	gArrowSprite = sprite_load("rom://arrow.i4.sprite");
+	gArrowSprite = sprite_load("rom://arrow.ia8.sprite");
 	gPointerSprite = sprite_load("rom://pointer.ia4.sprite");
 	gNumberSprites = sprite_load("rom://numbers.i4.sprite");
 	gNumberBGSprite = sprite_load("rom://timershadow.i8.sprite");
@@ -214,6 +214,7 @@ void boot(void) {
 		t3d_tri_draw(0, 1, 2);
 		t3d_tri_draw(2, 3, 0);
 		t3d_tri_sync();
+		rdpq_sync_pipe();
     gTroopBlock = rspq_block_end();
 
     rspq_block_begin();
